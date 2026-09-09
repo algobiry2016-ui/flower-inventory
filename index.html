@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مخزون ثلاجة الورد — دوكمنتيشن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+  :root{
+    --ink:#232420; --ink-soft:#5c6157;
+    --leaf:#26402F; --leaf-dark:#1b2f21;
+    --rose:#B5707A; --rose-soft:#e7d3d6;
+    --paper:#F5F6F1; --card:#FFFFFF; --line:#DEDAD0;
+    --amber:#B8863A; --amber-bg:#FBF1DD;
+    --blue:#3E6E8E; --blue-bg:#E9F1F6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Cairo',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 60px;}
+  .band{background:var(--leaf);color:#fff;padding:26px 0 22px;}
+  .band .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .brandmark{font-size:12px;letter-spacing:.04em;color:#cfe0d3;font-weight:500;}
+  .band h1{margin:2px 0 0;font-size:22px;font-weight:800;}
+  .band .sub{font-size:13px;color:#bcd2c1;margin-top:4px;}
+  .status-pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#e7efe8;padding:6px 14px;border-radius:20px;font-size:12.5px;display:flex;align-items:center;gap:7px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#7fd99a;flex:none;}
+  .dot.err{background:#e08b7a;}
+  .tabs{display:flex;gap:6px;margin:22px 0 18px;border-bottom:1px solid var(--line);overflow-x:auto;}
+  .tab{background:none;border:none;font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;color:var(--ink-soft);padding:11px 14px;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:color .15s;}
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--leaf);border-bottom-color:var(--rose);}
+  .tab .badge{background:var(--amber);color:#fff;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;margin-right:5px;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:22px;}
+  .card h2{margin:0 0 3px;font-size:16px;font-weight:700;}
+  .card .hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 16px;}
+  form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  form .full{grid-column:1/-1;}
+  @media(max-width:640px){form{grid-template-columns:1fr 1fr;}}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  label .opt{font-weight:400;color:#9a9a90;}
+  input,select,textarea{width:100%;font-family:'Cairo',sans-serif;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:#fcfcfa;color:var(--ink);}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--leaf);outline-offset:1px;border-color:var(--leaf);}
+  .actions{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:4px;flex-wrap:wrap;gap:8px;}
+  .actions .exp{display:flex;gap:8px;}
+  button.primary{background:var(--leaf);color:#fff;border:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;padding:10px 22px;border-radius:7px;cursor:pointer;transition:background .15s;}
+  button.primary:hover{background:var(--leaf-dark);}
+  button.primary:disabled{opacity:.55;cursor:default;}
+  button.ghost{background:#fff;color:var(--leaf);border:1px solid var(--leaf);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;padding:8px 16px;border-radius:7px;cursor:pointer;}
+  button.ghost:hover{background:#EEF3EE;}
+  .table-card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:22px;}
+  .table-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:8px;}
+  .table-head h3{margin:0;font-size:14.5px;font-weight:700;}
+  .count{font-size:12px;color:var(--ink-soft);}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{padding:10px 14px;text-align:right;white-space:nowrap;}
+  thead th{background:#EEF1EA;color:var(--ink-soft);font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line);}
+  tbody tr{border-bottom:1px solid #F0EEE8;}
+  tbody tr:hover{background:#FAFAF7;}
+  td.notes{white-space:normal;color:var(--ink-soft);max-width:220px;}
+  .del{background:none;border:none;cursor:pointer;color:var(--rose);font-size:12.5px;font-weight:600;font-family:'Cairo',sans-serif;padding:4px 8px;border-radius:5px;}
+  .del:hover{background:var(--rose-soft);}
+  .empty{padding:34px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .low{background:var(--amber-bg) !important;}
+  .low td:first-child{border-right:3px solid var(--amber);}
+  .open-issue{background:var(--blue-bg) !important;}
+  .badge-low{display:inline-block;background:var(--amber);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:6px;}
+  .balance-note{font-size:12.5px;color:var(--ink-soft);padding:14px 18px;border-top:1px solid var(--line);background:#FAFAF7;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .kpi .v{font-size:20px;font-weight:800;color:var(--leaf);}
+  .kpi .l{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  select.status-select{font-size:12.5px;padding:6px 8px;min-width:170px;}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--leaf-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+  .toast.error{background:#8a3a30;}
+  .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:800px){.subgrid{grid-template-columns:1fr;}}
+  .adv{border:1px dashed var(--line);border-radius:8px;padding:10px 14px 14px;}
+  .adv summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--leaf);list-style:none;}
+  .adv summary::-webkit-details-marker{display:none;}
+  .adv summary::before{content:'+ ';}
+  .adv[open] summary::before{content:'− ';}
+  .adv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;}
+  @media(max-width:640px){.adv-grid{grid-template-columns:1fr 1fr;}}
+  .rank-list{list-style:none;margin:0;padding:0;}
+  .rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0EEE8;}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-num{width:22px;height:22px;border-radius:50%;background:var(--leaf);color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;}
+  .rank-num.damaged{background:var(--rose);}
+  .rank-body{flex:1;min-width:0;}
+  .rank-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px;}
+  .rank-top .name{font-weight:600;}
+  .rank-top .val{color:var(--ink-soft);font-size:12.5px;}
+  .rank-bar-bg{background:#EEF1EA;border-radius:6px;height:6px;overflow:hidden;}
+  .rank-bar{height:100%;background:var(--leaf);border-radius:6px;}
+  .rank-bar.damaged{background:var(--rose);}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px 28px;max-width:360px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.06);}
+  .login-card .brandmark{color:var(--ink-soft);}
+  .login-card h1{font-size:19px;margin:6px 0 4px;color:var(--ink);}
+  .login-card .sub{color:var(--ink-soft);font-size:13px;margin-bottom:22px;}
+  .login-error{color:#a33;font-size:13px;margin-top:6px;min-height:18px;}
+  .user-badge{display:flex;align-items:center;gap:10px;font-size:12.5px;color:#e7efe8;}
+  .user-badge button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;font-family:'Cairo',sans-serif;font-size:12px;padding:5px 12px;border-radius:16px;cursor:pointer;}
+  .user-badge button:hover{background:rgba(255,255,255,.22);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,24,20,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:60;}
+  .modal-card{background:var(--card);border-radius:12px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;padding:22px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .modal-head h3{margin:0;font-size:16px;}
+  .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);}
+  .edit-link{background:none;border:none;cursor:pointer;color:var(--leaf);font-size:12.5px;font-weight:600;font-family:'Cairo',sans-serif;padding:4px 8px;border-radius:5px;}
+  .edit-link:hover{background:#EEF3EE;}
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div class="brandmark">DOCUMENTATION</div>
+    <h1>مخزون ثلاجة الورد</h1>
+    <p class="sub">سجّل دخولك للمتابعة</p>
+    <form id="login-form" style="display:block">
+      <div style="margin-bottom:12px"><label>البريد الإلكتروني</label><input type="email" id="login-email" required></div>
+      <div style="margin-bottom:6px"><label>كلمة المرور</label><input type="password" id="login-password" required></div>
+      <div class="login-error" id="login-error"></div>
+      <button type="submit" class="primary" style="width:100%;margin-top:10px">دخول</button>
+    </form>
+  </div>
+</div>
+
+<div id="app-content" style="display:none">
+<div class="band">
+  <div class="wrap">
+    <div>
+      <div class="brandmark">DOCUMENTATION</div>
+      <h1>مخزون ثلاجة الورد</h1>
+      <div class="sub">سجل مشترك — دخول، خروج، تالف، نواقص، الرصيد، والتقارير</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">جاري التحميل…</span></div>
+      <div class="user-badge"><span id="user-email"></span><button id="logout-btn">تسجيل خروج</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="tabs">
+    <button class="tab active" data-tab="inflow">دخول الورد</button>
+    <button class="tab" data-tab="outflow">خروج الورد</button>
+    <button class="tab" data-tab="damaged">الورد التالف</button>
+    <button class="tab" data-tab="shortage">متابعة النواقص<span class="badge" id="shortage-badge" style="display:none"></span></button>
+    <button class="tab" data-tab="balance">الرصيد الحالي</button>
+    <button class="tab" data-tab="reports">التقارير</button>
+  </div>
+
+  <!-- INFLOW -->
+  <div class="panel active" id="panel-inflow">
+    <div class="card">
+      <h2>بيانات الفاتورة</h2>
+      <p class="hint">عبّيها مرة وحدة، وبعدين ضيف كل صنف موجود بنفس الفاتورة بالأسفل واحد واحد. لو الشحنة مستوردة (هولندا، كينيا...) غيّر "بلد المنشأ" وعبّي تكلفة الشحن/الجمارك — النظام يوزعها تلقائياً على أصناف الفاتورة حسب قيمة كل صنف.</p>
+      <form id="form-inflow-header" style="grid-template-columns:repeat(3,1fr)">
+        <div><label>التاريخ</label><input type="date" name="date" id="hdr-date" required></div>
+        <div><label>المورد</label><input type="text" name="supplier" id="hdr-supplier" placeholder="اسم المورد" required></div>
+        <div><label>رقم الفاتورة <span class="opt">(اختياري)</span></label><input type="text" name="invoiceNo" id="hdr-invoiceNo" placeholder="مثال: 1042"></div>
+        <div><label>بلد المنشأ</label><input type="text" name="origin" id="hdr-origin" list="originCountries" value="السعودية"></div>
+        <div class="full"><label>تكلفة الشحن والجمارك الإجمالية لهذه الشحنة (ريال) <span class="opt">(اختياري — للشحنات المستوردة فقط، تشمل رسوم الجمارك وضريبة الاستيراد إن وجدت)</span></label><input type="number" name="freight" id="hdr-freight" min="0" step="0.01" placeholder="مثال: 850"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>إضافة صنف من هذه الفاتورة</h2>
+      <p class="hint">أضف كل صنف بزر "إضافة الصنف"، وبعد ما تخلص كل أصناف الفاتورة اضغط "حفظ الفاتورة كاملة" مرة وحدة تحت.</p>
+      <form id="form-inflow-item">
+        <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
+        <div><label>اللون <span class="opt">(اتركه فاضي لو ما يحتاج)</span></label><input type="text" name="color" list="flowerColors" placeholder="مثال: أحمر"></div>
+        <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
+        <div><label>الوحدة</label><select name="unit"><option>غصن</option><option>ربطة</option><option>حبة</option></select></div>
+        <div><label>حالة الورد</label>
+          <select name="condition"><option>ممتازة</option><option>جيدة</option><option>متوسطة</option><option>ضعيفة</option></select>
+        </div>
+        <div class="full"><label>ملاحظات <span class="opt">(اختياري)</span></label><input type="text" name="notes" placeholder="اختياري"></div>
+
+        <details class="full adv">
+          <summary>تفاصيل هذا الصنف بالفاتورة (اختياري) — كمية الفاتورة، السعر، نقص</summary>
+          <div class="adv-grid">
+            <div><label>الكمية حسب الفاتورة</label><input type="number" name="invoiceQty" min="1" placeholder="اتركه فاضي إذا مطابقة"></div>
+            <div><label>سعر الوحدة (ريال)</label><input type="number" name="unitPrice" min="0" step="0.01" placeholder="سعر سطر الصنف بالفاتورة"></div>
+            <div class="full"><label>طريقة تسعير المورد</label>
+              <select name="vatMode" id="item-vatMode">
+                <option value="excl">السعر قبل الضريبة (تُضاف 15%)</option>
+                <option value="incl">السعر شامل الضريبة بالفعل</option>
+                <option value="none">مورد أجنبي — بدون ضريبة سعودية على السطر (الجمارك تُحسب من الحقل أعلاه)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions"><span></span><button type="submit" class="ghost">+ إضافة الصنف</button></div>
+      </form>
+    </div>
+
+    <div class="table-card" id="pending-card" style="display:none">
+      <div class="table-head"><h3>أصناف هذه الفاتورة (لسه ما انحفظت)</h3><span class="count" id="pending-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="pending-body"></tbody>
+      </table></div>
+      <div class="actions" style="padding:14px 18px">
+        <span class="hint" id="pending-hint" style="margin:0"></span>
+        <button class="primary" id="save-invoice-btn" onclick="saveInvoice()">حفظ الفاتورة كاملة</button>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-head"><h3>سجل الدخول</h3><span class="count" id="inflow-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>نوع الورد</th><th>اللون</th><th>المستلم</th><th>الوحدة</th><th>حسب الفاتورة</th><th>السعر المدخل</th><th>طريقة التسعير</th><th>شحن/جمارك للوحدة</th><th>التكلفة النهائية للوحدة</th><th>الإجمالي</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
+        <tbody id="inflow-body"></tbody>
+      </table></div>
+      <div class="empty" id="inflow-empty" style="display:none">لا يوجد سجلات دخول بعد</div>
+    </div>
+  </div>
+
+  <!-- OUTFLOW -->
+  <div class="panel" id="panel-outflow">
+    <div class="card">
+      <h2>تسجيل خروج ورد</h2>
+      <form id="form-outflow">
+        <div><label>التاريخ</label><input type="date" name="date" required></div>
+        <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
+        <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors" placeholder="اتركه فاضي لو ما يحتاج"></div>
+        <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
+        <div><label>الوحدة</label><select name="unit"><option>غصن</option><option>ربطة</option><option>حبة</option></select></div>
+        <div><label>الوجهة</label>
+          <select name="destination">
+            <option value="المتجر (الموقع)">المتجر (الموقع)</option>
+            <option value="واتساب">واتساب</option>
+            <option value="المحل">المحل</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div><label>حالة الورد</label>
+          <select name="condition"><option>ممتازة</option><option>جيدة</option><option>متوسطة</option><option>ضعيفة</option></select>
+        </div>
+        <div><label>ملاحظات</label><input type="text" name="notes" placeholder="اختياري"></div>
+        <div class="actions"><span></span><button type="submit" class="primary">إضافة السجل</button></div>
+      </form>
+    </div>
+    <div class="table-card">
+      <div class="table-head"><h3>سجل الخروج</h3><span class="count" id="outflow-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الوجهة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
+        <tbody id="outflow-body"></tbody>
+      </table></div>
+      <div class="empty" id="outflow-empty" style="display:none">لا يوجد سجلات خروج بعد</div>
+    </div>
+  </div>
+
+  <!-- DAMAGED -->
+  <div class="panel" id="panel-damaged">
+    <div class="card">
+      <h2>تسجيل ورد تالف</h2>
+      <form id="form-damaged">
+        <div><label>التاريخ</label><input type="date" name="date" required></div>
+        <div><label>المورد <span class="opt">(اختياري)</span></label><input type="text" name="supplier" placeholder="اسم المورد"></div>
+        <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
+        <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors"></div>
+        <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
+        <div><label>الوحدة</label><select name="unit"><option>غصن</option><option>ربطة</option><option>حبة</option></select></div>
+        <div><label>سبب التلف</label><input type="text" name="reason" list="damageReasons" required></div>
+        <div class="actions"><span></span><button type="submit" class="primary">إضافة السجل</button></div>
+      </form>
+    </div>
+    <div class="table-card">
+      <div class="table-head"><h3>سجل التالف</h3><span class="count" id="damaged-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>سبب التلف</th><th>أضافه</th><th></th></tr></thead>
+        <tbody id="damaged-body"></tbody>
+      </table></div>
+      <div class="empty" id="damaged-empty" style="display:none">لا يوجد سجلات تالف بعد</div>
+    </div>
+  </div>
+
+  <!-- SHORTAGE -->
+  <div class="panel" id="panel-shortage">
+    <div class="table-card">
+      <div class="table-head"><h3>نواقص الفواتير</h3><span class="count" id="shortage-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>حسب الفاتورة</th><th>المستلم</th><th>الفرق</th><th>الحالة</th></tr></thead>
+        <tbody id="shortage-body"></tbody>
+      </table></div>
+      <div class="empty" id="shortage-empty" style="display:none">ما فيه نواقص مسجلة — كل الفواتير مطابقة</div>
+      <div class="balance-note">غيّر "الحالة" من القائمة مباشرة أول ما عبده يتواصل مع المورد ويوصل لحل — يتحفظ فوراً للفريق كله.</div>
+    </div>
+  </div>
+
+  <!-- BALANCE -->
+  <div class="panel" id="panel-balance">
+    <div class="card">
+      <h2>الرصيد الافتتاحي</h2>
+      <p class="hint">تعبى مرة وحدة بس، لتسجيل الكمية الموجودة فعلياً بالثلاجة وقت ما تبدأون النظام. أي صنف يجيكم جديد بعد كذا ما يحتاج تضيفونه هنا — يكفي تسجلونه من "دخول الورد" عادي وبيبدأ رصيده من صفر ويتحدث تلقائي.</p>
+      <form id="form-opening">
+        <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
+        <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors"></div>
+        <div><label>الكمية</label><input type="number" name="qty" min="0" required></div>
+        <div><label>الوحدة</label><select name="unit"><option>غصن</option><option>ربطة</option><option>حبة</option></select></div>
+        <div><label>سعر الوحدة (ريال) <span class="opt">(اختياري)</span></label><input type="number" name="unitPrice" min="0" step="0.01" placeholder="لتقييم قيمة الرصيد الافتتاحي"></div>
+        <div class="full"><label>ملاحظة <span class="opt">(اختياري)</span></label><input type="text" name="note" placeholder="مثال: جرد بداية التشغيل بتاريخ ..."></div>
+        <div class="actions"><span></span><button type="submit" class="primary">إضافة رصيد افتتاحي</button></div>
+      </form>
+    </div>
+    <div class="table-card" id="opening-card">
+      <div class="table-head"><h3>سجلات الرصيد الافتتاحي</h3><span class="count" id="opening-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>سعر الوحدة</th><th>ملاحظة</th><th></th></tr></thead>
+        <tbody id="opening-body"></tbody>
+      </table></div>
+      <div class="empty" id="opening-empty" style="display:none">ما فيه رصيد افتتاحي مسجل — الرصيد الحالي يعتمد فقط على الدخول والخروج والتالف</div>
+    </div>
+
+    <div class="kpis" style="grid-template-columns:1fr;margin-bottom:16px" id="inventory-value-kpi">
+      <div class="kpi"><div class="v" id="kpi-inventory-value">0 ر.س</div><div class="l">القيمة التقديرية الإجمالية للمخزون الحالي شاملة الضريبة (بناءً على أسعار الشراء المسجّلة)</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-head">
+        <h3>الرصيد الحالي حسب النوع واللون والوحدة</h3>
+        <span class="count">افتتاحي + وارد − صادر − تالف = الرصيد</span>
+      </div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>افتتاحي</th><th>الوارد</th><th>الصادر</th><th>التالف</th><th>الرصيد الحالي</th><th>متوسط السعر شامل الضريبة</th><th>قيمة الرصيد</th></tr></thead>
+        <tbody id="balance-body"></tbody>
+      </table></div>
+      <div class="empty" id="balance-empty" style="display:none">أضف سجلات دخول أو رصيد افتتاحي عشان يظهر الرصيد</div>
+      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة رصيدها أقل من 10 — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—".</div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="panel" id="panel-reports">
+
+    <div class="subgrid">
+      <div class="card">
+        <h2>الأصناف الأكثر استهلاكاً</h2>
+        <p class="hint">أعلى 5 أصناف حسب إجمالي كمية الخروج (كل الفترات)</p>
+        <ul class="rank-list" id="top-consumed"></ul>
+      </div>
+      <div class="card">
+        <h2>الأصناف الأكثر تلفاً</h2>
+        <p class="hint">أعلى 5 أصناف حسب إجمالي كمية التالف (كل الفترات)</p>
+        <ul class="rank-list" id="top-damaged"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>الأصناف الأعلى تكلفة هالك</h2>
+      <p class="hint">أعلى 5 أصناف حسب القيمة التقديرية المفقودة بالريال (يحتاج تسجيل سعر الوحدة عند الدخول)</p>
+      <ul class="rank-list" id="top-damaged-cost"></ul>
+    </div>
+
+    <div class="subgrid">
+      <div class="card">
+        <h2>تقرير يومي</h2>
+        <p class="hint">يجمع كل حركات الدخول والخروج والتالف لتاريخ معيّن</p>
+        <form id="form-daily-report" style="grid-template-columns:1fr;">
+          <div><label>التاريخ</label><input type="date" name="date" id="daily-date" required></div>
+        </form>
+        <div class="actions" style="margin-top:10px">
+          <span id="daily-summary" class="hint" style="margin:0"></span>
+          <div class="exp">
+            <button class="ghost" onclick="exportDaily('ar')">تصدير Excel (عربي)</button>
+            <button class="ghost" onclick="exportDaily('en')">Export Excel (English)</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>تقرير شهري</h2>
+        <p class="hint">إجمالي الوارد والصادر والتالف لكل نوع/لون خلال الشهر، ونسبة الهالك</p>
+        <form id="form-monthly-report" style="grid-template-columns:1fr;">
+          <div><label>الشهر</label><input type="month" name="month" id="monthly-month" required></div>
+        </form>
+        <div class="actions" style="margin-top:10px">
+          <span id="monthly-summary" class="hint" style="margin:0"></span>
+          <div class="exp">
+            <button class="ghost" onclick="exportMonthly('ar')">تصدير Excel (عربي)</button>
+            <button class="ghost" onclick="exportMonthly('en')">Export Excel (English)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpis" id="monthly-kpis" style="display:none">
+      <div class="kpi"><div class="v" id="kpi-purchases">0 ر.س</div><div class="l">إجمالي مشتريات الورد هذا الشهر</div></div>
+      <div class="kpi"><div class="v" id="kpi-in">0</div><div class="l">إجمالي الوارد هذا الشهر</div></div>
+      <div class="kpi"><div class="v" id="kpi-out">0</div><div class="l">إجمالي الصادر هذا الشهر</div></div>
+      <div class="kpi"><div class="v" id="kpi-damaged">0</div><div class="l">إجمالي التالف هذا الشهر</div></div>
+      <div class="kpi"><div class="v" id="kpi-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
+      <div class="kpi"><div class="v" id="kpi-waste-cost">0 ر.س</div><div class="l">تكلفة الهالك التقديرية هذا الشهر</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h3>مشتريات اليوم حسب الصنف</h3><span class="count" id="daily-purchases-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>الكمية المشتراة</th><th>إجمالي التكلفة</th></tr></thead>
+        <tbody id="daily-purchases-body"></tbody>
+      </table></div>
+      <div class="empty" id="daily-purchases-empty" style="display:none">ما فيه مشتريات مسجلة بهذا التاريخ</div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h3>تفاصيل اليوم المحدد (كل الحركات)</h3><span class="count" id="daily-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>الحركة</th><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>تكلفة الوحدة (شامل الضريبة والشحن)</th><th>تفاصيل</th><th>ملاحظات</th></tr></thead>
+        <tbody id="daily-body"></tbody>
+      </table></div>
+      <div class="empty" id="daily-empty" style="display:none">ما فيه حركات مسجلة بهذا التاريخ</div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h3>تفاصيل الشهر المحدد حسب النوع واللون</h3><span class="count" id="monthly-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>إجمالي الوارد</th><th>تكلفة المشتريات</th><th>إجمالي الصادر</th><th>إجمالي التالف</th></tr></thead>
+        <tbody id="monthly-body"></tbody>
+      </table></div>
+      <div class="empty" id="monthly-empty" style="display:none">ما فيه حركات مسجلة بهذا الشهر</div>
+    </div>
+  </div>
+
+</div>
+
+<datalist id="flowerTypes"></datalist>
+<datalist id="flowerColors"></datalist>
+<datalist id="originCountries">
+  <option value="السعودية"><option value="هولندا"><option value="كينيا"><option value="إثيوبيا"><option value="الإكوادور">
+</datalist>
+<datalist id="damageReasons">
+  <option value="ذبول طبيعي"><option value="عطل بالتبريد"><option value="تلف أثناء النقل">
+  <option value="تخزين زائد"><option value="سوء تعامل"><option value="أخرى">
+</datalist>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="edit-modal-title">تعديل السجل</h3><button class="modal-close" onclick="closeEditModal()">✕</button></div>
+    <form id="edit-form"></form>
+  </div>
+</div>
+</div>
+
+<script>
+// TODO: paste your Firebase project config here (Firebase Console → Project settings → General → Your apps → SDK setup and configuration)
+const firebaseConfig = {
+  apiKey: "AIzaSyDHGRTRhVH4H9O0aAdN6F1VNTcyR4KGqsk",
+  authDomain: "rf2026-39cd1.firebaseapp.com",
+  projectId: "rf2026-39cd1",
+  storageBucket: "rf2026-39cd1.firebasestorage.app",
+  messagingSenderId: "101436225182",
+  appId: "1:101436225182:web:9ba84f3fe8f46520316d8f"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[] };
+
+const DEFAULT_TYPES = ['رز هولندي','رز إكوادوري','توليب','أوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
+const DEFAULT_COLORS = ['أحمر','أبيض','وردي','أصفر','برتقالي','بنفسجي','مشكل'];
+const UNITS = ['غصن','ربطة','حبة'];
+
+const SHORTAGE_STATUSES = ['قيد المتابعة مع المورد','تم التعويض من المورد','تم الخصم من الفاتورة'];
+
+const T = {
+  headers:{
+    movement:['الحركة','Movement'], date:['التاريخ','Date'], supplier:['المورد','Supplier'],
+    invoice:['رقم الفاتورة','Invoice No'], type:['نوع الورد','Flower Type'], color:['اللون','Color'],
+    qty:['الكمية','Quantity'], unit:['الوحدة','Unit'], details:['تفاصيل','Details'], notes:['ملاحظات','Notes'],
+    inTotal:['إجمالي الوارد','Total In'], outTotal:['إجمالي الصادر','Total Out'], damagedTotal:['إجمالي التالف','Total Damaged'],
+    purchaseCost:['تكلفة المشتريات','Purchase Cost'],
+    unitPrice:['سعر الوحدة','Unit Price']
+  },
+  kind:{'دخول':'Inflow','خروج':'Outflow','تالف':'Damaged'},
+  condition:{'ممتازة':'Excellent','جيدة':'Good','متوسطة':'Fair','ضعيفة':'Poor'},
+  reason:{'ذبول طبيعي':'Natural wilting','عطل بالتبريد':'Cooling malfunction','تلف أثناء النقل':'Damaged in transit','تخزين زائد':'Overstock','سوء تعامل':'Mishandling','أخرى':'Other'},
+  type:{'رز هولندي':'Dutch Rose','رز إكوادوري':'Ecuadorian Rose','توليب':'Tulip','أوركيد':'Orchid','ليليوم':'Lily','جيبسوفيلا':"Baby's Breath",'بيوني':'Peony','دوار الشمس':'Sunflower'},
+  color:{'أحمر':'Red','أبيض':'White','وردي':'Pink','أصفر':'Yellow','برتقالي':'Orange','بنفسجي':'Purple','مشكل':'Mixed'},
+  unit:{'غصن':'Stem','ربطة':'Bunch','حبة':'Piece'}
+};
+function tr(dict, val){ if(!val) return val; return dict[val] || val; }
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function monthStrNow(){ return new Date().toISOString().slice(0,7); }
+
+function showToast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(()=> t.className = 'toast', 2200);
+}
+function setStatus(text, ok){
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusDot').className = 'dot' + (ok ? '' : ' err');
+}
+
+async function withRetry(fn, attempts=3, delay=800){
+  let lastErr;
+  for(let i=0;i<attempts;i++){
+    try{ return await fn(); }
+    catch(e){ lastErr = e; if(i<attempts-1) await new Promise(r=>setTimeout(r, delay)); }
+  }
+  throw lastErr;
+}
+async function fsAdd(collection, record){
+  return withRetry(()=> db.collection(collection).add(record));
+}
+async function fsUpdate(collection, id, patch){
+  return withRetry(()=> db.collection(collection).doc(id).update(patch));
+}
+async function fsDelete(collection, id){
+  return withRetry(()=> db.collection(collection).doc(id).delete());
+}
+
+let listenersAttached = false;
+function attachListeners(){
+  if(listenersAttached) return;
+  listenersAttached = true;
+  ['inflow','outflow','damaged','opening'].forEach(kind=>{
+    db.collection(KEYS[kind]).onSnapshot(snap=>{
+      data[kind] = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      setStatus('متصل — بيانات مشتركة مع الفريق (تحديث لحظي)', true);
+      renderAll();
+    }, err=>{ setStatus('تعذر الاتصال بقاعدة البيانات', false); });
+  });
+  db.collection('meta').doc('catalog').onSnapshot(doc=>{
+    const c = doc.exists ? doc.data() : {types:[],colors:[]};
+    data.types = c.types||[]; data.colors = c.colors||[];
+    refreshCatalogLists();
+  }, err=>{});
+}
+
+function refreshCatalogLists(){
+  const typesSet = Array.from(new Set([...DEFAULT_TYPES, ...data.types]));
+  const colorsSet = Array.from(new Set([...DEFAULT_COLORS, ...data.colors]));
+  document.getElementById('flowerTypes').innerHTML = typesSet.map(t=>`<option value="${esc(t)}">`).join('');
+  document.getElementById('flowerColors').innerHTML = colorsSet.map(c=>`<option value="${esc(c)}">`).join('');
+}
+function findNewCatalogTerms(type, color){
+  const newTypes = [], newColors = [];
+  if(type && !data.types.includes(type) && !DEFAULT_TYPES.includes(type)) newTypes.push(type);
+  if(color){
+    color.split(/[,،]/).map(s=>s.trim()).filter(Boolean).forEach(c=>{
+      if(!data.colors.includes(c) && !DEFAULT_COLORS.includes(c) && !newColors.includes(c)) newColors.push(c);
+    });
+  }
+  return {newTypes, newColors};
+}
+async function learnCatalog(type, color){
+  const {newTypes, newColors} = findNewCatalogTerms(type, color);
+  if(!newTypes.length && !newColors.length) return;
+  const patch = {};
+  if(newTypes.length) patch.types = firebase.firestore.FieldValue.arrayUnion(...newTypes);
+  if(newColors.length) patch.colors = firebase.firestore.FieldValue.arrayUnion(...newColors);
+  try{ await withRetry(()=> db.collection('meta').doc('catalog').set(patch, {merge:true})); }catch(e){}
+}
+async function learnCatalogBatch(records){
+  const allTypes = new Set(), allColors = new Set();
+  records.forEach(r=>{
+    const {newTypes, newColors} = findNewCatalogTerms(r.type, r.color);
+    newTypes.forEach(t=>allTypes.add(t));
+    newColors.forEach(c=>allColors.add(c));
+  });
+  if(!allTypes.size && !allColors.size) return;
+  const patch = {};
+  if(allTypes.size) patch.types = firebase.firestore.FieldValue.arrayUnion(...allTypes);
+  if(allColors.size) patch.colors = firebase.firestore.FieldValue.arrayUnion(...allColors);
+  try{ await withRetry(()=> db.collection('meta').doc('catalog').set(patch, {merge:true})); }catch(e){}
+}
+
+
+function fmtDate(d){ if(!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function priceInclVAT(r){
+  const price = Number(r.unitPrice)||0;
+  if(!price) return 0;
+  if(r.vatMode === 'incl' || r.vatMode === 'none') return price;
+  const vat = (r.vatRate!==undefined && r.vatRate!=='' && !isNaN(Number(r.vatRate))) ? Number(r.vatRate) : 15;
+  return price * (1 + vat/100);
+}
+function landedCost(r){
+  return priceInclVAT(r) + (Number(r.freightPerUnit)||0);
+}
+
+function userTag(r){ return r.addedBy ? esc(r.addedBy.split('@')[0]) : '—'; }
+function rowsHtml(kind, arr){
+  const sorted = [...arr].sort((a,b)=> (b.date||'').localeCompare(a.date||'') || b.id - a.id);
+  if(kind==='inflow'){
+    return sorted.map(r => {
+      const price = Number(r.unitPrice)||0;
+      const priceIncl = priceInclVAT(r);
+      const freight = Number(r.freightPerUnit)||0;
+      const final = landedCost(r);
+      const total = final ? (final*Number(r.qty||0)).toFixed(2) : '—';
+      const modeLabel = r.vatMode==='incl' ? 'شامل الضريبة' : r.vatMode==='none' ? 'مستورد (بدون ضريبة)' : 'قبل الضريبة (+15%)';
+      return `<tr>
+      <td>${fmtDate(r.date)}</td><td>${esc(r.supplier)}</td><td>${esc(r.invoiceNo||'—')}</td><td>${esc(r.origin||'السعودية')}</td>
+      <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
+      <td>${esc(r.invoiceQty||'—')}</td>
+      <td>${price ? price.toFixed(2)+' ر.س' : '—'}</td><td>${price ? modeLabel : '—'}</td>
+      <td>${freight ? freight.toFixed(2)+' ر.س' : '—'}</td>
+      <td>${final ? final.toFixed(2)+' ر.س' : '—'}</td><td>${total==='—'?'—':total+' ر.س'}</td>
+      <td>${esc(r.condition)}</td><td class="notes">${esc(r.notes||'—')}</td><td>${userTag(r)}</td>
+      <td><button class="edit-link" onclick="editRecord('inflow', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('inflow', '${r.id}')">حذف</button></td>
+    </tr>`;
+    }).join('');
+  }
+  if(kind==='outflow'){
+    return sorted.map(r => `<tr>
+      <td>${fmtDate(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td>
+      <td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td><td>${esc(r.destination||'—')}</td><td>${esc(r.condition)}</td><td class="notes">${esc(r.notes||'—')}</td><td>${userTag(r)}</td>
+      <td><button class="edit-link" onclick="editRecord('outflow', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('outflow', '${r.id}')">حذف</button></td>
+    </tr>`).join('');
+  }
+  return sorted.map(r => `<tr>
+    <td>${fmtDate(r.date)}</td><td>${esc(r.supplier||'—')}</td><td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td>
+    <td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td><td class="notes">${esc(r.reason)}</td><td>${userTag(r)}</td>
+    <td><button class="edit-link" onclick="editRecord('damaged', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('damaged', '${r.id}')">حذف</button></td>
+  </tr>`).join('');
+}
+function renderTable(kind){
+  const body = document.getElementById(`${kind}-body`);
+  const empty = document.getElementById(`${kind}-empty`);
+  const count = document.getElementById(`${kind}-count`);
+  const arr = data[kind];
+  count.textContent = arr.length ? `${arr.length} سجل` : '';
+  if(!arr.length){ body.innerHTML=''; empty.style.display='block'; }
+  else{ empty.style.display='none'; body.innerHTML = rowsHtml(kind, arr); }
+}
+
+async function removeRecord(kind, id){
+  try{ await fsDelete(KEYS[kind], id); showToast('تم حذف السجل'); }
+  catch(e){ showToast('تعذر الحذف، حاول مرة ثانية', true); }
+}
+
+function wireForm(kind){
+  const form = document.getElementById(`form-${kind}`);
+  const dateInput = form.querySelector('input[name="date"]');
+  if(dateInput) dateInput.value = todayStr();
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const fd = new FormData(form);
+    const record = {};
+    for(const [k,v] of fd.entries()) record[k] = v;
+    record.addedBy = auth.currentUser ? auth.currentUser.email : '';
+    record.addedAt = firebase.firestore.FieldValue.serverTimestamp();
+    btn.disabled = true; btn.textContent = 'جاري الإضافة…';
+    try{
+      await fsAdd(KEYS[kind], record);
+      await learnCatalog(record.type, record.color);
+      showToast('تمت إضافة السجل');
+      form.reset();
+      if(dateInput) dateInput.value = todayStr();
+    }catch(err){
+      showToast('تعذر الحفظ، تأكد من الاتصال وحاول مرة ثانية', true);
+    }
+    btn.disabled = false; btn.textContent = form.id==='form-opening' ? 'إضافة رصيد افتتاحي' : 'إضافة السجل';
+  });
+}
+
+// ---- Shortage tab ----
+function renderShortage(){
+  const list = data.inflow.filter(r => Number(r.invoiceQty||0) > Number(r.qty||0));
+  const body = document.getElementById('shortage-body');
+  const empty = document.getElementById('shortage-empty');
+  const count = document.getElementById('shortage-count');
+  const badge = document.getElementById('shortage-badge');
+  count.textContent = list.length ? `${list.length} سجل` : '';
+  if(list.length){ badge.style.display='inline-block'; badge.textContent = list.length; }
+  else{ badge.style.display='none'; }
+  if(!list.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const sorted = [...list].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  body.innerHTML = sorted.map(r=>{
+    const diff = Number(r.invoiceQty) - Number(r.qty);
+    const resolved = r.shortageStatus && r.shortageStatus !== SHORTAGE_STATUSES[0];
+    return `<tr class="${resolved ? '' : 'open-issue'}">
+      <td>${fmtDate(r.date)}</td><td>${esc(r.supplier)}</td><td>${esc(r.invoiceNo||'—')}</td>
+      <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${esc(r.unit||'غصن')}</td>
+      <td>${r.invoiceQty}</td><td>${r.qty}</td><td><strong>${diff}</strong></td>
+      <td><select class="status-select" onchange="updateShortageStatus('${r.id}', this.value)">
+        ${SHORTAGE_STATUSES.map(s=>`<option value="${esc(s)}" ${r.shortageStatus===s?'selected':''}>${esc(s)}</option>`).join('')}
+      </select></td>
+    </tr>`;
+  }).join('');
+}
+async function updateShortageStatus(id, status){
+  try{ await fsUpdate(KEYS.inflow, id, {shortageStatus: status}); showToast('تم تحديث حالة النقص'); }
+  catch(e){ showToast('تعذر الحفظ، حاول مرة ثانية', true); renderShortage(); }
+}
+
+// ---- Opening balance ----
+function renderOpening(){
+  const body = document.getElementById('opening-body');
+  const empty = document.getElementById('opening-empty');
+  const count = document.getElementById('opening-count');
+  count.textContent = data.opening.length ? `${data.opening.length} سجل` : '';
+  if(!data.opening.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = data.opening.map(r=>{
+    const price = Number(r.unitPrice)||0;
+    return `<tr>
+    <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
+    <td>${price ? price.toFixed(2)+' ر.س' : '—'}</td><td class="notes">${esc(r.note||'—')}</td>
+    <td><button class="edit-link" onclick="editRecord('opening', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('opening', '${r.id}')">حذف</button></td>
+  </tr>`;
+  }).join('');
+}
+
+// ---- Balance ----
+function groupKey3(type,color,unit){ return (type||'').trim()+'|'+(color||'').trim()+'|'+(unit||'غصن'); }
+
+function getAvgCostMap(){
+  const acc = {};
+  const feed = (type,color,unit,record) => {
+    const q = Number(record.qty)||0;
+    const cost = landedCost(record);
+    if(!cost || !q) return;
+    const key = groupKey3(type,color,unit);
+    if(!acc[key]) acc[key] = { qty:0, cost:0 };
+    acc[key].qty += q; acc[key].cost += cost*q;
+  };
+  data.opening.forEach(r=> feed(r.type, r.color, r.unit, {...r, vatMode:'incl'}));
+  data.inflow.forEach(r=> feed(r.type, r.color, r.unit, r));
+  const avg = {};
+  Object.keys(acc).forEach(k => avg[k] = acc[k].qty ? acc[k].cost/acc[k].qty : 0);
+  return avg;
+}
+
+function renderBalance(){
+  const map = {};
+  const bump = (type, color, unit, field, qty) => {
+    const key = groupKey3(type,color,unit);
+    if(!map[key]) map[key] = { type, color: color||'—', unit: unit||'غصن', opening:0, in:0, out:0, damaged:0 };
+    map[key][field] += Number(qty)||0;
+  };
+  data.opening.forEach(r=> bump(r.type, r.color, r.unit, 'opening', r.qty));
+  data.inflow.forEach(r=> bump(r.type, r.color, r.unit, 'in', r.qty));
+  data.outflow.forEach(r=> bump(r.type, r.color, r.unit, 'out', r.qty));
+  data.damaged.forEach(r=> bump(r.type, r.color, r.unit, 'damaged', r.qty));
+  const rows = Object.values(map).sort((a,b)=> a.type.localeCompare(b.type,'ar'));
+  const body = document.getElementById('balance-body');
+  const empty = document.getElementById('balance-empty');
+  const avgMap = getAvgCostMap();
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; document.getElementById('kpi-inventory-value').textContent = '0 ر.س'; return; }
+  empty.style.display='none';
+  let totalValue = 0;
+  body.innerHTML = rows.map(r=>{
+    const balance = r.opening + r.in - r.out - r.damaged;
+    const low = balance < 10;
+    const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
+    const value = avg ? balance*avg : null;
+    if(value) totalValue += value;
+    return `<tr class="${low?'low':''}">
+      <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.opening}</td><td>${r.in}</td><td>${r.out}</td><td>${r.damaged}</td>
+      <td><strong>${balance}</strong>${low?'<span class="badge-low">منخفض</span>':''}</td>
+      <td>${avg ? avg.toFixed(2)+' ر.س' : '—'}</td>
+      <td>${value!==null ? value.toFixed(0)+' ر.س' : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('kpi-inventory-value').textContent = totalValue.toFixed(0) + ' ر.س';
+}
+
+// ---- Top consumed / top damaged ----
+function aggByTypeUnit(records){
+  const map = {};
+  records.forEach(r=>{
+    const key = (r.type||'').trim()+'|'+(r.unit||'غصن');
+    if(!map[key]) map[key] = { type:r.type, unit:r.unit||'غصن', qty:0 };
+    map[key].qty += Number(r.qty)||0;
+  });
+  return Object.values(map).sort((a,b)=> b.qty - a.qty);
+}
+function renderRankList(elId, list, cls){
+  const el = document.getElementById(elId);
+  if(!list.length){ el.innerHTML = '<li class="empty" style="padding:16px 0">ما فيه بيانات كافية بعد</li>'; return; }
+  const max = list[0].qty || 1;
+  el.innerHTML = list.slice(0,5).map((r,i)=>`
+    <li class="rank-row">
+      <span class="rank-num ${cls}">${i+1}</span>
+      <div class="rank-body">
+        <div class="rank-top"><span class="name">${esc(r.type)}</span><span class="val">${r.qty} ${esc(r.unit)}</span></div>
+        <div class="rank-bar-bg"><div class="rank-bar ${cls}" style="width:${Math.max(6,(r.qty/max)*100)}%"></div></div>
+      </div>
+    </li>`).join('');
+}
+function aggDamagedCost(){
+  const avgMap = getAvgCostMap();
+  const map = {};
+  data.damaged.forEach(r=>{
+    const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
+    const cost = avg * (Number(r.qty)||0);
+    const key = (r.type||'').trim()+'|'+(r.unit||'غصن');
+    if(!map[key]) map[key] = { type:r.type, unit:r.unit||'غصن', cost:0 };
+    map[key].cost += cost;
+  });
+  return Object.values(map).sort((a,b)=> b.cost-a.cost);
+}
+function renderCostRankList(elId, list){
+  const el = document.getElementById(elId);
+  const withCost = list.filter(r=>r.cost>0);
+  if(!withCost.length){ el.innerHTML = '<li class="empty" style="padding:16px 0">سجّل أسعار الوحدة عند الدخول عشان يظهر هذا التقرير</li>'; return; }
+  const max = withCost[0].cost || 1;
+  el.innerHTML = withCost.slice(0,5).map((r,i)=>`
+    <li class="rank-row">
+      <span class="rank-num damaged">${i+1}</span>
+      <div class="rank-body">
+        <div class="rank-top"><span class="name">${esc(r.type)}</span><span class="val">${r.cost.toFixed(0)} ر.س</span></div>
+        <div class="rank-bar-bg"><div class="rank-bar damaged" style="width:${Math.max(6,(r.cost/max)*100)}%"></div></div>
+      </div>
+    </li>`).join('');
+}
+function renderTopLists(){
+  renderRankList('top-consumed', aggByTypeUnit(data.outflow), '');
+  renderRankList('top-damaged', aggByTypeUnit(data.damaged), 'damaged');
+  renderCostRankList('top-damaged-cost', aggDamagedCost());
+}
+
+// ---- Reports ----
+function getDayRecords(dateStr){
+  const inflow = data.inflow.filter(r=>r.date===dateStr).map(r=>({...r, kind:'دخول', extra:r.condition}));
+  const outflow = data.outflow.filter(r=>r.date===dateStr).map(r=>({...r, kind:'خروج', extra: r.destination ? `${r.condition} — ${r.destination}` : r.condition}));
+  const damaged = data.damaged.filter(r=>r.date===dateStr).map(r=>({...r, kind:'تالف', extra:r.reason}));
+  return [...inflow,...outflow,...damaged].sort((a,b)=> a.kind.localeCompare(b.kind,'ar'));
+}
+function renderDailyPurchases(){
+  const dateStr = document.getElementById('daily-date').value;
+  const rows = getDayPurchasesByType(dateStr);
+  const body = document.getElementById('daily-purchases-body');
+  const empty = document.getElementById('daily-purchases-empty');
+  const count = document.getElementById('daily-purchases-count');
+  count.textContent = rows.length ? `${rows.length} صنف` : '';
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = rows.map(r=>`<tr>
+    <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.qty}</td><td>${r.cost.toFixed(2)} ر.س</td>
+  </tr>`).join('');
+}
+function renderDailyReport(){
+  const dateStr = document.getElementById('daily-date').value;
+  const recs = getDayRecords(dateStr);
+  const body = document.getElementById('daily-body');
+  const empty = document.getElementById('daily-empty');
+  const count = document.getElementById('daily-count');
+  count.textContent = recs.length ? `${recs.length} حركة` : '';
+  const dayInflow = data.inflow.filter(r=>r.date===dateStr);
+  const purchases = dayInflow.reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  document.getElementById('daily-summary').textContent = recs.length
+    ? `${dayInflow.length} دخول، ${data.outflow.filter(r=>r.date===dateStr).length} خروج، ${data.damaged.filter(r=>r.date===dateStr).length} تالف — إجمالي المشتريات: ${purchases.toFixed(0)} ر.س`
+    : 'ما فيه حركات بهذا اليوم';
+  if(!recs.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = recs.map(r=>{
+    const cost = r.kind==='دخول' ? landedCost(r) : 0;
+    return `<tr>
+    <td>${esc(r.kind)}</td><td>${fmtDate(r.date)}</td><td>${esc(r.supplier||'—')}</td>
+    <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
+    <td>${cost ? cost.toFixed(2)+' ر.س' : '—'}</td>
+    <td>${esc(r.extra||'—')}</td><td class="notes">${esc(r.notes||'—')}</td>
+  </tr>`;
+  }).join('');
+}
+function getMonthAgg(monthStr){
+  const map = {};
+  const bump=(type,color,unit,field,qty)=>{
+    const key=groupKey3(type,color,unit);
+    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
+    map[key][field]+=Number(qty)||0;
+  };
+  data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>{
+    bump(r.type,r.color,r.unit,'in',r.qty);
+    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
+  });
+  data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
+  data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
+  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
+}
+function getDayPurchasesByType(dateStr){
+  const map = {};
+  data.inflow.filter(r=>r.date===dateStr).forEach(r=>{
+    const key = groupKey3(r.type,r.color,r.unit);
+    if(!map[key]) map[key] = { type:r.type, color:r.color||'—', unit:r.unit||'غصن', qty:0, cost:0 };
+    map[key].qty += Number(r.qty)||0;
+    map[key].cost += landedCost(r)*(Number(r.qty)||0);
+  });
+  return Object.values(map).sort((a,b)=> a.type.localeCompare(b.type,'ar'));
+}
+function renderMonthlyReport(){
+  const monthStr = document.getElementById('monthly-month').value;
+  const rows = getMonthAgg(monthStr);
+  const body = document.getElementById('monthly-body');
+  const empty = document.getElementById('monthly-empty');
+  const count = document.getElementById('monthly-count');
+  count.textContent = rows.length ? `${rows.length} صنف` : '';
+  const totalIn = rows.reduce((s,r)=>s+r.in,0);
+  const totalOut = rows.reduce((s,r)=>s+r.out,0);
+  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
+  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
+  const avgMap = getAvgCostMap();
+  const wasteCost = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr)
+    .reduce((s,r)=> s + (avgMap[groupKey3(r.type,r.color,r.unit)]||0) * (Number(r.qty)||0), 0);
+  const purchases = data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr)
+    .reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  document.getElementById('monthly-summary').textContent = rows.length ? `${rows.length} صنف نشط هذا الشهر` : 'ما فيه حركات بهذا الشهر';
+  document.getElementById('monthly-kpis').style.display = rows.length ? 'grid' : 'none';
+  document.getElementById('kpi-purchases').textContent = purchases.toFixed(0) + ' ر.س';
+  document.getElementById('kpi-in').textContent = totalIn;
+  document.getElementById('kpi-out').textContent = totalOut;
+  document.getElementById('kpi-damaged').textContent = totalDamaged;
+  document.getElementById('kpi-waste').textContent = wastePct + '%';
+  document.getElementById('kpi-waste-cost').textContent = wasteCost.toFixed(0) + ' ر.س';
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('');
+}
+
+function downloadSheet(aoa, filename, rtl){
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!views'] = [{RTL: !!rtl}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+function exportDaily(lang){
+  const dateStr = document.getElementById('daily-date').value;
+  const recs = getDayRecords(dateStr);
+  const H = T.headers;
+  const header = lang==='ar'
+    ? [H.movement[0],H.date[0],H.supplier[0],H.type[0],H.color[0],H.qty[0],H.unit[0],H.unitPrice[0],H.details[0],H.notes[0]]
+    : [H.movement[1],H.date[1],H.supplier[1],H.type[1],H.color[1],H.qty[1],H.unit[1],H.unitPrice[1],H.details[1],H.notes[1]];
+  const rows = recs.map(r=>{
+    const cost = r.kind==='دخول' ? landedCost(r) : 0;
+    const priceStr = cost ? cost.toFixed(2) : '';
+    if(lang==='ar'){
+      return [r.kind, fmtDate(r.date), r.supplier||'—', r.type, r.color||'—', r.qty, r.unit||'غصن', priceStr||'—', r.extra||'—', r.notes||'—'];
+    }
+    const extra = r.kind==='تالف' ? tr(T.reason, r.extra) : tr(T.condition, r.extra);
+    return [tr(T.kind,r.kind), r.date||'', r.supplier||'-', tr(T.type,r.type), tr(T.color,r.color)||'-', r.qty, tr(T.unit,r.unit)||'Stem', priceStr||'-', extra||'-', r.notes||'-'];
+  });
+  downloadSheet([header, ...rows], `daily-report-${dateStr}-${lang}.xlsx`, lang==='ar');
+  showToast('تم تصدير التقرير اليومي');
+}
+function exportMonthly(lang){
+  const monthStr = document.getElementById('monthly-month').value;
+  const rows = getMonthAgg(monthStr);
+  const H = T.headers;
+  const header = lang==='ar'
+    ? [H.type[0],H.color[0],H.unit[0],H.inTotal[0],H.purchaseCost[0],H.outTotal[0],H.damagedTotal[0]]
+    : [H.type[1],H.color[1],H.unit[1],H.inTotal[1],H.purchaseCost[1],H.outTotal[1],H.damagedTotal[1]];
+  const body = rows.map(r=> lang==='ar'
+    ? [r.type, r.color, r.unit, r.in, r.cost.toFixed(2), r.out, r.damaged]
+    : [tr(T.type,r.type), tr(T.color,r.color), tr(T.unit,r.unit), r.in, r.cost.toFixed(2), r.out, r.damaged]
+  );
+  const totalIn = rows.reduce((s,r)=>s+r.in,0);
+  const totalOut = rows.reduce((s,r)=>s+r.out,0);
+  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
+  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
+  const avgMap = getAvgCostMap();
+  const wasteCost = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr)
+    .reduce((s,r)=> s + (avgMap[groupKey3(r.type,r.color,r.unit)]||0) * (Number(r.qty)||0), 0);
+  const purchases = data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr)
+    .reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  const summaryRows = lang==='ar'
+    ? [[`الشهر: ${monthStr}`],[`إجمالي مشتريات الورد: ${purchases.toFixed(0)} ر.س`],[`إجمالي الوارد: ${totalIn}`],[`إجمالي الصادر: ${totalOut}`],[`إجمالي التالف: ${totalDamaged}`],[`نسبة الهالك: ${wastePct}%`],[`تكلفة الهالك التقديرية: ${wasteCost.toFixed(0)} ر.س`],[]]
+    : [[`Month: ${monthStr}`],[`Total Purchases: ${purchases.toFixed(0)} SAR`],[`Total In: ${totalIn}`],[`Total Out: ${totalOut}`],[`Total Damaged: ${totalDamaged}`],[`Waste Rate: ${wastePct}%`],[`Estimated Waste Cost: ${wasteCost.toFixed(0)} SAR`],[]];
+  downloadSheet([...summaryRows, header, ...body], `monthly-report-${monthStr}-${lang}.xlsx`, lang==='ar');
+  showToast('تم تصدير التقرير الشهري');
+}
+
+// ---- Multi-item invoice (inflow) ----
+let pendingItems = [];
+
+function wireInvoiceFlow(){
+  const itemForm = document.getElementById('form-inflow-item');
+  const originInput = document.getElementById('hdr-origin');
+  originInput.addEventListener('change', () => {
+    const vatSelect = itemForm.querySelector('[name="vatMode"]');
+    vatSelect.value = (originInput.value.trim() && originInput.value.trim() !== 'السعودية') ? 'none' : 'excl';
+  });
+  itemForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const hdrDate = document.getElementById('hdr-date').value;
+    const hdrSupplier = document.getElementById('hdr-supplier').value.trim();
+    const hdrInvoiceNo = document.getElementById('hdr-invoiceNo').value.trim();
+    const hdrOrigin = originInput.value.trim() || 'السعودية';
+    if(!hdrDate || !hdrSupplier){
+      showToast('عبّي التاريخ والمورد ببيانات الفاتورة فوق أول', true);
+      document.getElementById('hdr-supplier').focus();
+      return;
+    }
+    const fd = new FormData(itemForm);
+    const item = { date: hdrDate, supplier: hdrSupplier, invoiceNo: hdrInvoiceNo, origin: hdrOrigin, _tempId: Date.now()+Math.floor(Math.random()*1000) };
+    for(const [k,v] of fd.entries()) item[k] = v;
+    const invQty = Number(item.invoiceQty)||0;
+    const gotQty = Number(item.qty)||0;
+    item.shortageStatus = (invQty > gotQty) ? SHORTAGE_STATUSES[0] : '';
+    pendingItems.push(item);
+    renderPending();
+
+    // reset item-only fields, keep header intact
+    itemForm.querySelector('[name="type"]').value = '';
+    itemForm.querySelector('[name="color"]').value = '';
+    itemForm.querySelector('[name="qty"]').value = '';
+    itemForm.querySelector('[name="unit"]').selectedIndex = 0;
+    itemForm.querySelector('[name="condition"]').selectedIndex = 0;
+    itemForm.querySelector('[name="notes"]').value = '';
+    itemForm.querySelector('[name="invoiceQty"]').value = '';
+    itemForm.querySelector('[name="unitPrice"]').value = '';
+    itemForm.querySelector('[name="type"]').focus();
+    showToast('تمت إضافة الصنف — كمّل باقي أصناف الفاتورة أو احفظها');
+  });
+}
+
+function renderPending(){
+  const card = document.getElementById('pending-card');
+  const body = document.getElementById('pending-body');
+  const count = document.getElementById('pending-count');
+  const hint = document.getElementById('pending-hint');
+  if(!pendingItems.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  count.textContent = `${pendingItems.length} صنف`;
+  hint.textContent = `بعد ما تخلص كل أصناف الفاتورة، اضغط الزر لحفظها كلها مرة وحدة`;
+  body.innerHTML = pendingItems.map(it => `<tr>
+    <td>${esc(it.type)}</td><td>${esc(it.color||'—')}</td><td>${it.qty}</td><td>${esc(it.unit||'غصن')}</td><td>${esc(it.condition)}</td>
+    <td><button class="del" onclick="removePending(${it._tempId})">حذف</button></td>
+  </tr>`).join('');
+}
+function removePending(tempId){
+  pendingItems = pendingItems.filter(it => it._tempId !== tempId);
+  renderPending();
+}
+
+async function saveInvoice(){
+  if(!pendingItems.length){ showToast('أضف صنف واحد على الأقل قبل الحفظ', true); return; }
+  const btn = document.getElementById('save-invoice-btn');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+
+  const freightTotal = Number(document.getElementById('hdr-freight').value)||0;
+  if(freightTotal > 0){
+    const weights = pendingItems.map(it => (Number(it.unitPrice)||0) * (Number(it.qty)||0));
+    let totalWeight = weights.reduce((s,w)=>s+w,0);
+    if(!totalWeight) totalWeight = pendingItems.reduce((s,it)=> s+(Number(it.qty)||0), 0) || 1;
+    pendingItems.forEach((it,i) => {
+      const w = weights[i] || Number(it.qty)||0;
+      const share = freightTotal * (w/totalWeight);
+      const qty = Number(it.qty)||1;
+      it.freightPerUnit = share/qty;
+    });
+  }
+
+  const newRecords = pendingItems.map(it => {
+    const rec = { ...it };
+    delete rec._tempId;
+    rec.addedBy = auth.currentUser ? auth.currentUser.email : '';
+    rec.addedAt = firebase.firestore.FieldValue.serverTimestamp();
+    return rec;
+  });
+  try{
+    await withRetry(async () => {
+      const batch = db.batch();
+      newRecords.forEach(rec => {
+        const ref = db.collection(KEYS.inflow).doc();
+        batch.set(ref, rec);
+      });
+      await batch.commit();
+    });
+    await learnCatalogBatch(newRecords);
+    showToast(`تم حفظ الفاتورة (${newRecords.length} صنف)`);
+    pendingItems = [];
+    renderPending();
+    document.getElementById('hdr-supplier').value = '';
+    document.getElementById('hdr-invoiceNo').value = '';
+    document.getElementById('hdr-freight').value = '';
+    document.getElementById('hdr-origin').value = 'السعودية';
+    document.getElementById('hdr-date').value = todayStr();
+  }catch(err){
+    showToast('تعذر حفظ الفاتورة، تأكد من الاتصال وحاول مرة ثانية — أصناف الفاتورة لسه محفوظة بالأسفل', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ الفاتورة كاملة';
+}
+
+// ---- Edit existing records ----
+const FIELD_CONFIGS = {
+  inflow: [
+    {name:'date', label:'التاريخ', type:'date', required:true},
+    {name:'supplier', label:'المورد', type:'text', required:true},
+    {name:'invoiceNo', label:'رقم الفاتورة', type:'text'},
+    {name:'origin', label:'بلد المنشأ', type:'text', list:'originCountries'},
+    {name:'type', label:'نوع الورد', type:'text', list:'flowerTypes', required:true},
+    {name:'color', label:'اللون', type:'text', list:'flowerColors'},
+    {name:'qty', label:'الكمية المستلمة', type:'number', min:'1', required:true},
+    {name:'unit', label:'الوحدة', type:'select', options:UNITS},
+    {name:'invoiceQty', label:'الكمية حسب الفاتورة', type:'number', min:'1'},
+    {name:'unitPrice', label:'سعر الوحدة قبل الضريبة (ريال)', type:'number', min:'0', step:'0.01'},
+    {name:'freightPerUnit', label:'شحن/جمارك للوحدة (ريال)', type:'number', min:'0', step:'0.01'},
+    {name:'vatMode', label:'طريقة تسعير المورد', type:'select', options:[
+      {value:'excl', label:'قبل الضريبة (تُضاف 15%)'}, {value:'incl', label:'شامل الضريبة بالفعل'}, {value:'none', label:'مورد أجنبي (بدون ضريبة)'}
+    ]},
+    {name:'condition', label:'حالة الورد', type:'select', options:['ممتازة','جيدة','متوسطة','ضعيفة']},
+    {name:'notes', label:'ملاحظات', type:'text'}
+  ],
+  outflow: [
+    {name:'date', label:'التاريخ', type:'date', required:true},
+    {name:'type', label:'نوع الورد', type:'text', list:'flowerTypes', required:true},
+    {name:'color', label:'اللون', type:'text', list:'flowerColors'},
+    {name:'qty', label:'الكمية', type:'number', min:'1', required:true},
+    {name:'unit', label:'الوحدة', type:'select', options:UNITS},
+    {name:'destination', label:'الوجهة', type:'select', options:['المتجر (الموقع)','واتساب','المحل','أخرى']},
+    {name:'condition', label:'حالة الورد', type:'select', options:['ممتازة','جيدة','متوسطة','ضعيفة']},
+    {name:'notes', label:'ملاحظات', type:'text'}
+  ],
+  damaged: [
+    {name:'date', label:'التاريخ', type:'date', required:true},
+    {name:'supplier', label:'المورد', type:'text'},
+    {name:'type', label:'نوع الورد', type:'text', list:'flowerTypes', required:true},
+    {name:'color', label:'اللون', type:'text', list:'flowerColors'},
+    {name:'qty', label:'الكمية', type:'number', min:'1', required:true},
+    {name:'unit', label:'الوحدة', type:'select', options:UNITS},
+    {name:'reason', label:'سبب التلف', type:'text', list:'damageReasons', required:true}
+  ],
+  opening: [
+    {name:'type', label:'نوع الورد', type:'text', list:'flowerTypes', required:true},
+    {name:'color', label:'اللون', type:'text', list:'flowerColors'},
+    {name:'qty', label:'الكمية', type:'number', min:'0', required:true},
+    {name:'unit', label:'الوحدة', type:'select', options:UNITS},
+    {name:'unitPrice', label:'سعر الوحدة (ريال)', type:'number', min:'0', step:'0.01'},
+    {name:'note', label:'ملاحظة', type:'text'}
+  ]
+};
+function fieldHtml(f, value){
+  const req = f.required ? 'required' : '';
+  const v = value===undefined||value===null ? '' : value;
+  if(f.type==='select'){
+    const opts = f.options.map(o=>{
+      const val = typeof o==='object' ? o.value : o;
+      const lbl = typeof o==='object' ? o.label : o;
+      return `<option value="${esc(val)}" ${String(v)===String(val)?'selected':''}>${esc(lbl)}</option>`;
+    }).join('');
+    return `<div><label>${f.label}</label><select name="${f.name}" ${req}>${opts}</select></div>`;
+  }
+  const listAttr = f.list ? `list="${f.list}"` : '';
+  const minAttr = f.min!==undefined ? `min="${f.min}"` : '';
+  const stepAttr = f.step ? `step="${f.step}"` : '';
+  return `<div><label>${f.label}</label><input type="${f.type}" name="${f.name}" value="${esc(v)}" ${listAttr} ${minAttr} ${stepAttr} ${req}></div>`;
+}
+function editRecord(kind, id){
+  const rec = data[kind].find(r => r.id === id);
+  if(!rec) return;
+  const titles = {inflow:'تعديل سجل دخول', outflow:'تعديل سجل خروج', damaged:'تعديل سجل تالف', opening:'تعديل الرصيد الافتتاحي'};
+  document.getElementById('edit-modal-title').textContent = titles[kind];
+  const form = document.getElementById('edit-form');
+  form.innerHTML = `<div class="full" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">` +
+    FIELD_CONFIGS[kind].map(f => fieldHtml(f, rec[f.name])).join('') +
+    `</div><div class="actions" style="margin-top:16px"><span></span><button type="submit" class="primary">حفظ التعديل</button></div>`;
+  form.dataset.kind = kind;
+  form.dataset.id = id;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+function closeEditModal(){
+  document.getElementById('edit-modal').style.display = 'none';
+}
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const kind = form.dataset.kind, id = form.dataset.id;
+  const fd = new FormData(form);
+  const patch = {};
+  for(const [k,v] of fd.entries()) patch[k] = v;
+  if(Number(patch.qty) <= 0 || isNaN(Number(patch.qty))){
+    showToast('الكمية لازم تكون رقم أكبر من صفر', true); return;
+  }
+  if(patch.unitPrice !== undefined && patch.unitPrice !== '' && Number(patch.unitPrice) < 0){
+    showToast('سعر الوحدة ما يصير رقم سالب', true); return;
+  }
+  if(patch.invoiceQty !== undefined && patch.invoiceQty !== '' && Number(patch.invoiceQty) <= 0){
+    showToast('الكمية حسب الفاتورة لازم تكون أكبر من صفر أو فاضية', true); return;
+  }
+  if(kind==='inflow'){
+    const invQty = Number(patch.invoiceQty)||0;
+    const gotQty = Number(patch.qty)||0;
+    if(invQty <= gotQty) patch.shortageStatus = '';
+  }
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    await fsUpdate(KEYS[kind], id, patch);
+    await learnCatalog(patch.type, patch.color);
+    showToast('تم حفظ التعديل');
+    closeEditModal();
+  }catch(err){
+    showToast('تعذر الحفظ، تأكد من الاتصال وحاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ التعديل';
+});
+
+function renderAll(){
+  renderTable('inflow'); renderTable('outflow'); renderTable('damaged');
+  renderShortage(); renderOpening(); renderBalance(); renderTopLists();
+  renderDailyPurchases(); renderDailyReport(); renderMonthlyReport();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+document.getElementById('hdr-date').value = todayStr();
+document.getElementById('daily-date').value = todayStr();
+document.getElementById('monthly-month').value = monthStrNow();
+document.getElementById('daily-date').addEventListener('change', () => { renderDailyPurchases(); renderDailyReport(); });
+document.getElementById('monthly-month').addEventListener('change', renderMonthlyReport);
+
+wireForm('outflow');
+wireForm('damaged');
+wireForm('opening');
+wireInvoiceFlow();
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = e.target.querySelector('button[type="submit"]');
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'جاري الدخول…';
+  try{
+    await auth.signInWithEmailAndPassword(email, pass);
+  }catch(err){
+    errEl.textContent = 'بيانات الدخول غير صحيحة، أو المستخدم غير موجود بعد — تواصل مع مدير النظام لإنشاء حسابك.';
+  }
+  btn.disabled = false; btn.textContent = 'دخول';
+});
+document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
+
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+    document.getElementById('user-email').textContent = user.email;
+    attachListeners();
+  }else{
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-content').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
