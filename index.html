@@ -18,7 +18,7 @@
     --leaf:#26402F; --leaf-dark:#1b2f21;
     --rose:#B5707A; --rose-soft:#e7d3d6;
     --paper:#F5F6F1; --card:#FFFFFF; --line:#DEDAD0;
-    --amber:#B8863A; --amber-bg:#FBF1DD;
+    --amber:#B8863A; --amber-bg:#FBF1DD; --danger:#C0392B; --danger-bg:#FBEAEA;
     --blue:#3E6E8E; --blue-bg:#E9F1F6;
   }
   *{box-sizing:border-box;}
@@ -72,10 +72,10 @@
   .del{background:none;border:none;cursor:pointer;color:var(--rose);font-size:12.5px;font-weight:600;font-family:'Cairo',sans-serif;padding:4px 8px;border-radius:5px;}
   .del:hover{background:var(--rose-soft);}
   .empty{padding:34px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
-  .low{background:var(--amber-bg) !important;}
-  .low td:first-child{border-right:3px solid var(--amber);}
+  .low{background:var(--danger-bg) !important;}
+  .low td:first-child{border-right:3px solid var(--danger);}
   .open-issue{background:var(--blue-bg) !important;}
-  .badge-low{display:inline-block;background:var(--amber);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:6px;}
+  .badge-low{display:inline-block;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:6px;}
   .balance-note{font-size:12.5px;color:var(--ink-soft);padding:14px 18px;border-top:1px solid var(--line);background:#FAFAF7;}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
@@ -122,6 +122,14 @@
   .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);}
   .edit-link{background:none;border:none;cursor:pointer;color:var(--leaf);font-size:12.5px;font-weight:600;font-family:'Cairo',sans-serif;padding:4px 8px;border-radius:5px;}
   .edit-link:hover{background:#EEF3EE;}
+  .stock-alert{background:var(--danger-bg);border:1px solid #E3B8B3;border-radius:10px;padding:14px 18px;margin:0 0 18px;display:none;}
+  .stock-alert.show{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;}
+  .stock-alert .msg{font-size:13.5px;color:#7a2a20;flex:1;min-width:220px;line-height:1.7;}
+  .stock-alert .msg strong{color:var(--danger);}
+  .stock-alert .wa-btn{background:#25D366;color:#fff;border:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .stock-alert .wa-btn:hover{background:#1fb959;}
+  .wa-settings{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .wa-settings input{max-width:220px;}
 </style>
 </head>
 <body>
@@ -156,6 +164,11 @@
 </div>
 
 <div class="wrap">
+
+  <div class="stock-alert" id="stock-alert">
+    <div class="msg" id="stock-alert-msg"></div>
+    <button class="wa-btn" id="wa-send-btn" onclick="sendWhatsAppAlert()">📲 أرسل عبر واتساب</button>
+  </div>
 
   <div class="tabs">
     <button class="tab active" data-tab="inflow">دخول الورد</button>
@@ -309,6 +322,14 @@
   <!-- BALANCE -->
   <div class="panel" id="panel-balance">
     <div class="card">
+      <h2>إعدادات تنبيه المخزون المنخفض</h2>
+      <p class="hint">الحد الأدنى قبل التنبيه: <strong>20 غصن</strong> للأصناف اللي تُدخل بالغصن، و<strong>2 ربطة</strong> للأصناف اللي تُدخل بالربطة أو الحبة. سجّل رقم واتساب هنا (بصيغة دولية بدون +، مثال: 9665XXXXXXXX) عشان يظهر زر الإرسال بالتنبيه.</p>
+      <form id="form-wa-settings" style="grid-template-columns:1fr auto">
+        <div><label>رقم واتساب للتنبيهات</label><input type="text" id="wa-phone" placeholder="9665XXXXXXXX"></div>
+        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">حفظ الرقم</button></div>
+      </form>
+    </div>
+    <div class="card">
       <h2>الرصيد الافتتاحي</h2>
       <p class="hint">تعبى مرة وحدة بس، لتسجيل الكمية الموجودة فعلياً بالثلاجة وقت ما تبدأون النظام. أي صنف يجيكم جديد بعد كذا ما يحتاج تضيفونه هنا — يكفي تسجلونه من "دخول الورد" عادي وبيبدأ رصيده من صفر ويتحدث تلقائي.</p>
       <form id="form-opening">
@@ -343,7 +364,7 @@
         <tbody id="balance-body"></tbody>
       </table></div>
       <div class="empty" id="balance-empty" style="display:none">أضف سجلات دخول أو رصيد افتتاحي عشان يظهر الرصيد</div>
-      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة رصيدها أقل من 10 — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—".</div>
+      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة وصلت للحد الأدنى (20 غصن أو 2 ربطة/حبة) — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—".</div>
     </div>
   </div>
 
@@ -474,7 +495,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
-let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[] };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'' };
 
 const DEFAULT_TYPES = ['رز هولندي','رز إكوادوري','توليب','أوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
 const DEFAULT_COLORS = ['أحمر','أبيض','وردي','أصفر','برتقالي','بنفسجي','مشكل'];
@@ -547,6 +568,13 @@ function attachListeners(){
     const c = doc.exists ? doc.data() : {types:[],colors:[]};
     data.types = c.types||[]; data.colors = c.colors||[];
     refreshCatalogLists();
+  }, err=>{});
+  db.collection('meta').doc('settings').onSnapshot(doc=>{
+    const s = doc.exists ? doc.data() : {};
+    data.alertPhone = s.alertPhone || '';
+    const phoneInput = document.getElementById('wa-phone');
+    if(phoneInput && document.activeElement !== phoneInput) phoneInput.value = data.alertPhone;
+    renderBalance();
   }, err=>{});
 }
 
@@ -683,12 +711,13 @@ function wireForm(kind){
 // ---- Shortage tab ----
 function renderShortage(){
   const list = data.inflow.filter(r => Number(r.invoiceQty||0) > Number(r.qty||0));
+  const openList = list.filter(r => !r.shortageStatus || r.shortageStatus === SHORTAGE_STATUSES[0]);
   const body = document.getElementById('shortage-body');
   const empty = document.getElementById('shortage-empty');
   const count = document.getElementById('shortage-count');
   const badge = document.getElementById('shortage-badge');
-  count.textContent = list.length ? `${list.length} سجل` : '';
-  if(list.length){ badge.style.display='inline-block'; badge.textContent = list.length; }
+  count.textContent = list.length ? `${openList.length} مفتوح من ${list.length} إجمالي` : '';
+  if(openList.length){ badge.style.display='inline-block'; badge.textContent = openList.length; }
   else{ badge.style.display='none'; }
   if(!list.length){ body.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
@@ -749,6 +778,10 @@ function getAvgCostMap(){
   return avg;
 }
 
+function lowStockThreshold(unit){
+  if(unit === 'غصن') return 20;
+  return 2; // ربطة و حبة
+}
 function renderBalance(){
   const map = {};
   const bump = (type, color, unit, field, qty) => {
@@ -764,12 +797,14 @@ function renderBalance(){
   const body = document.getElementById('balance-body');
   const empty = document.getElementById('balance-empty');
   const avgMap = getAvgCostMap();
-  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; document.getElementById('kpi-inventory-value').textContent = '0 ر.س'; return; }
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; document.getElementById('kpi-inventory-value').textContent = '0 ر.س'; renderLowStockBanner([]); return; }
   empty.style.display='none';
   let totalValue = 0;
+  const lowRows = [];
   body.innerHTML = rows.map(r=>{
     const balance = r.opening + r.in - r.out - r.damaged;
-    const low = balance < 10;
+    const low = balance < lowStockThreshold(r.unit);
+    if(low) lowRows.push({...r, balance});
     const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
     const value = avg ? balance*avg : null;
     if(value) totalValue += value;
@@ -781,6 +816,41 @@ function renderBalance(){
     </tr>`;
   }).join('');
   document.getElementById('kpi-inventory-value').textContent = totalValue.toFixed(0) + ' ر.س';
+  renderLowStockBanner(lowRows);
+}
+
+function renderLowStockBanner(lowRows){
+  const banner = document.getElementById('stock-alert');
+  const msg = document.getElementById('stock-alert-msg');
+  const waBtn = document.getElementById('wa-send-btn');
+  if(!lowRows.length){ banner.classList.remove('show'); return; }
+  banner.classList.add('show');
+  const items = lowRows.map(r => `${r.type}${r.color && r.color!=='—' ? ' ('+r.color+')' : ''}: ${r.balance} ${r.unit}`);
+  msg.innerHTML = `<strong>⚠️ ${lowRows.length} صنف وصل للحد الأدنى:</strong> ${esc(items.join('، '))}`;
+  waBtn.style.display = data.alertPhone ? 'inline-block' : 'none';
+}
+
+function sendWhatsAppAlert(){
+  if(!data.alertPhone){ showToast('سجّل رقم واتساب أول من تبويب الرصيد الحالي', true); return; }
+  const map = {};
+  const bump = (type, color, unit, field, qty) => {
+    const key = groupKey3(type,color,unit);
+    if(!map[key]) map[key] = { type, color: color||'—', unit: unit||'غصن', opening:0, in:0, out:0, damaged:0 };
+    map[key][field] += Number(qty)||0;
+  };
+  data.opening.forEach(r=> bump(r.type, r.color, r.unit, 'opening', r.qty));
+  data.inflow.forEach(r=> bump(r.type, r.color, r.unit, 'in', r.qty));
+  data.outflow.forEach(r=> bump(r.type, r.color, r.unit, 'out', r.qty));
+  data.damaged.forEach(r=> bump(r.type, r.color, r.unit, 'damaged', r.qty));
+  const lowRows = Object.values(map).map(r=>{
+    const balance = r.opening + r.in - r.out - r.damaged;
+    return {...r, balance};
+  }).filter(r => r.balance < lowStockThreshold(r.unit));
+  if(!lowRows.length){ showToast('ما فيه أصناف منخفضة حالياً'); return; }
+  const lines = lowRows.map(r => `- ${r.type}${r.color && r.color!=='—' ? ' ('+r.color+')' : ''}: ${r.balance} ${r.unit}`);
+  const text = `⚠️ تنبيه مخزون الورد منخفض:\n${lines.join('\n')}`;
+  const url = `https://wa.me/${data.alertPhone}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
 }
 
 // ---- Top consumed / top damaged ----
@@ -1240,6 +1310,20 @@ wireForm('outflow');
 wireForm('damaged');
 wireForm('opening');
 wireInvoiceFlow();
+
+document.getElementById('form-wa-settings').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const phone = document.getElementById('wa-phone').value.trim().replace(/[^0-9]/g,'');
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    await withRetry(()=> db.collection('meta').doc('settings').set({alertPhone: phone}, {merge:true}));
+    showToast('تم حفظ رقم واتساب');
+  }catch(err){
+    showToast('تعذر الحفظ، حاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ الرقم';
+});
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
