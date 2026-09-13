@@ -460,9 +460,9 @@
 
     <div class="subgrid">
       <div class="table-card">
-        <div class="table-head"><h3>استهلاك اليوم حسب اللون</h3><span class="count" id="daily-color-count"></span></div>
+        <div class="table-head"><h3>استهلاك اليوم حسب الصنف واللون</h3><span class="count" id="daily-color-count"></span></div>
         <div class="table-scroll"><table>
-          <thead><tr><th>اللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
           <tbody id="daily-color-body"></tbody>
         </table></div>
         <div class="empty" id="daily-color-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
@@ -488,9 +488,9 @@
 
     <div class="subgrid">
       <div class="table-card">
-        <div class="table-head"><h3>استهلاك الشهر حسب اللون</h3><span class="count" id="monthly-color-count"></span></div>
+        <div class="table-head"><h3>استهلاك الشهر حسب الصنف واللون</h3><span class="count" id="monthly-color-count"></span></div>
         <div class="table-scroll"><table>
-          <thead><tr><th>اللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
           <tbody id="monthly-color-body"></tbody>
         </table></div>
         <div class="empty" id="monthly-color-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
@@ -1047,9 +1047,9 @@ function renderDailyPurchases(){
 function getOutflowByColor(records){
   const map = {};
   records.forEach(r=>{
-    const color = r.color || 'غير محدد';
-    const key = color+'|'+(r.unit||'غصن');
-    if(!map[key]) map[key] = { color, unit:r.unit||'غصن', qty:0 };
+    const label = (r.color && r.color !== '—' && r.color.trim()) ? `${r.type} - ${r.color}` : r.type;
+    const key = label+'|'+(r.unit||'غصن');
+    if(!map[key]) map[key] = { color: label, unit:r.unit||'غصن', qty:0 };
     map[key].qty += Number(r.qty)||0;
   });
   return Object.values(map).sort((a,b)=> b.qty-a.qty);
