@@ -554,8 +554,8 @@ const db = firebase.firestore();
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
 let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{} };
 
-const DEFAULT_TYPES = ['رز هولندي','رز إكوادوري','توليب','أوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
-const DEFAULT_COLORS = ['أحمر','أبيض','وردي','أصفر','برتقالي','بنفسجي','مشكل'];
+const DEFAULT_TYPES = ['رز هولندي','رز اكوادوري','توليب','اوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
+const DEFAULT_COLORS = ['احمر','ابيض','وردي','اصفر','برتقالي','بنفسجي','مشكل'];
 const UNITS = ['غصن','ربطة','حبة'];
 
 const SHORTAGE_STATUSES = ['قيد المتابعة مع المورد','تم التعويض من المورد','تم الخصم من الفاتورة'];
@@ -572,8 +572,8 @@ const T = {
   kind:{'دخول':'Inflow','خروج':'Outflow','تالف':'Damaged'},
   condition:{'ممتازة':'Excellent','جيدة':'Good','متوسطة':'Fair','ضعيفة':'Poor'},
   reason:{'ذبول طبيعي':'Natural wilting','عطل بالتبريد':'Cooling malfunction','تلف أثناء النقل':'Damaged in transit','تخزين زائد':'Overstock','سوء تعامل':'Mishandling','أخرى':'Other'},
-  type:{'رز هولندي':'Dutch Rose','رز إكوادوري':'Ecuadorian Rose','توليب':'Tulip','أوركيد':'Orchid','ليليوم':'Lily','جيبسوفيلا':"Baby's Breath",'بيوني':'Peony','دوار الشمس':'Sunflower'},
-  color:{'أحمر':'Red','أبيض':'White','وردي':'Pink','أصفر':'Yellow','برتقالي':'Orange','بنفسجي':'Purple','مشكل':'Mixed'},
+  type:{'رز هولندي':'Dutch Rose','رز اكوادوري':'Ecuadorian Rose','توليب':'Tulip','اوركيد':'Orchid','ليليوم':'Lily','جيبسوفيلا':"Baby's Breath",'بيوني':'Peony','دوار الشمس':'Sunflower'},
+  color:{'احمر':'Red','ابيض':'White','وردي':'Pink','اصفر':'Yellow','برتقالي':'Orange','بنفسجي':'Purple','مشكل':'Mixed'},
   unit:{'غصن':'Stem','ربطة':'Bunch','حبة':'Piece'}
 };
 function tr(dict, val){ if(!val) return val; return dict[val] || val; }
@@ -647,21 +647,24 @@ function refreshCatalogLists(){
 }
 
 // ---- Text normalization & aliases (handles hamza variants + staff spelling differences) ----
-function normalizeAr(s){
+function stripHamzaDisplay(s){
   return (s||'').toString().trim()
     .replace(/[\u064B-\u065F\u0670]/g,'')
     .replace(/[إأآٱ]/g,'ا')
+    .replace(/\s+/g,' ');
+}
+function normalizeAr(s){
+  return stripHamzaDisplay(s)
     .replace(/ى/g,'ي')
     .replace(/ة/g,'ه')
-    .replace(/\s+/g,' ')
     .toLowerCase();
 }
 function canonicalizeTerm(term, knownList){
   if(!term) return term;
-  const norm = normalizeAr(term);
+  const base = stripHamzaDisplay(term); // أحمر -> احمر, always, regardless of catalog
+  const norm = normalizeAr(base);
   if(data.aliases && data.aliases[norm]) return data.aliases[norm];
-  const match = knownList.find(k => normalizeAr(k) === norm);
-  return match || term.trim();
+  return base;
 }
 function canonicalizeTypeColor(type, color){
   const allTypes = [...DEFAULT_TYPES, ...data.types];
