@@ -237,7 +237,12 @@
       </div>
     </div>
     <div class="table-card">
-      <div class="table-head"><h3>سجل الدخول</h3><span class="count" id="inflow-count"></span></div>
+      <div class="table-head"><h3>سجل الدخول</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="inflow-search" placeholder="ابحث برقم الفاتورة" style="width:180px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="inflow-count"></span>
+        </div>
+      </div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>نوع الورد</th><th>اللون</th><th>المستلم</th><th>الوحدة</th><th>حسب الفاتورة</th><th>السعر المدخل</th><th>طريقة التسعير</th><th>شحن/جمارك للوحدة</th><th>التكلفة النهائية للوحدة</th><th>الإجمالي</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="inflow-body"></tbody>
@@ -328,6 +333,20 @@
         <div><label>رقم واتساب للتنبيهات</label><input type="text" id="wa-phone" placeholder="9665XXXXXXXX"></div>
         <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">حفظ الرقم</button></div>
       </form>
+    </div>
+    <div class="card">
+      <h2>أسماء بديلة (لو عبده يكتب الاسم بطريقة مختلفة)</h2>
+      <p class="hint">مثال: لو عبده يكتب "بيبي بروز" بدل "بيبي روز"، أضفها هنا مرة وحدة — وبعدها أي مرة يكتبها بنفس الطريقة، النظام يحوّلها تلقائياً للاسم الصحيح بكل التقارير والرصيد. ملاحظة: الفروق البسيطة بالهمزة (أحمر / احمر) تتوحد تلقائياً بدون ما تحتاج تضيفها هنا.</p>
+      <form id="form-alias" style="grid-template-columns:1fr 1fr auto">
+        <div><label>الاسم اللي يكتبه عبده</label><input type="text" id="alias-from" required placeholder="بيبي بروز"></div>
+        <div><label>الاسم الصحيح (القياسي)</label><input type="text" id="alias-to" required list="flowerTypes" placeholder="بيبي روز"></div>
+        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">إضافة</button></div>
+      </form>
+      <div class="table-scroll" style="margin-top:14px"><table>
+        <thead><tr><th>يكتبها عبده</th><th>تتحول إلى</th><th></th></tr></thead>
+        <tbody id="alias-body"></tbody>
+      </table></div>
+      <div class="empty" id="alias-empty" style="display:none">ما فيه أسماء بديلة مسجلة بعد</div>
     </div>
     <div class="card">
       <h2>الرصيد الافتتاحي</h2>
@@ -439,6 +458,25 @@
       <div class="empty" id="daily-purchases-empty" style="display:none">ما فيه مشتريات مسجلة بهذا التاريخ</div>
     </div>
 
+    <div class="subgrid">
+      <div class="table-card">
+        <div class="table-head"><h3>استهلاك اليوم حسب اللون</h3><span class="count" id="daily-color-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>اللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <tbody id="daily-color-body"></tbody>
+        </table></div>
+        <div class="empty" id="daily-color-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><h3>استهلاك اليوم حسب الوجهة</h3><span class="count" id="daily-dest-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>الوجهة</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <tbody id="daily-dest-body"></tbody>
+        </table></div>
+        <div class="empty" id="daily-dest-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
+      </div>
+    </div>
+
     <div class="table-card">
       <div class="table-head"><h3>تفاصيل اليوم المحدد (كل الحركات)</h3><span class="count" id="daily-count"></span></div>
       <div class="table-scroll"><table>
@@ -446,6 +484,25 @@
         <tbody id="daily-body"></tbody>
       </table></div>
       <div class="empty" id="daily-empty" style="display:none">ما فيه حركات مسجلة بهذا التاريخ</div>
+    </div>
+
+    <div class="subgrid">
+      <div class="table-card">
+        <div class="table-head"><h3>استهلاك الشهر حسب اللون</h3><span class="count" id="monthly-color-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>اللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <tbody id="monthly-color-body"></tbody>
+        </table></div>
+        <div class="empty" id="monthly-color-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><h3>استهلاك الشهر حسب الوجهة</h3><span class="count" id="monthly-dest-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>الوجهة</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+          <tbody id="monthly-dest-body"></tbody>
+        </table></div>
+        <div class="empty" id="monthly-dest-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
+      </div>
     </div>
 
     <div class="table-card">
@@ -495,7 +552,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
-let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'' };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{} };
 
 const DEFAULT_TYPES = ['رز هولندي','رز إكوادوري','توليب','أوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
 const DEFAULT_COLORS = ['أحمر','أبيض','وردي','أصفر','برتقالي','بنفسجي','مشكل'];
@@ -576,6 +633,10 @@ function attachListeners(){
     if(phoneInput && document.activeElement !== phoneInput) phoneInput.value = data.alertPhone;
     renderBalance();
   }, err=>{});
+  db.collection('meta').doc('aliases').onSnapshot(doc=>{
+    data.aliases = doc.exists ? (doc.data()||{}) : {};
+    renderAliases();
+  }, err=>{});
 }
 
 function refreshCatalogLists(){
@@ -584,12 +645,39 @@ function refreshCatalogLists(){
   document.getElementById('flowerTypes').innerHTML = typesSet.map(t=>`<option value="${esc(t)}">`).join('');
   document.getElementById('flowerColors').innerHTML = colorsSet.map(c=>`<option value="${esc(c)}">`).join('');
 }
+
+// ---- Text normalization & aliases (handles hamza variants + staff spelling differences) ----
+function normalizeAr(s){
+  return (s||'').toString().trim()
+    .replace(/[\u064B-\u065F\u0670]/g,'')
+    .replace(/[إأآٱ]/g,'ا')
+    .replace(/ى/g,'ي')
+    .replace(/ة/g,'ه')
+    .replace(/\s+/g,' ')
+    .toLowerCase();
+}
+function canonicalizeTerm(term, knownList){
+  if(!term) return term;
+  const norm = normalizeAr(term);
+  if(data.aliases && data.aliases[norm]) return data.aliases[norm];
+  const match = knownList.find(k => normalizeAr(k) === norm);
+  return match || term.trim();
+}
+function canonicalizeTypeColor(type, color){
+  const allTypes = [...DEFAULT_TYPES, ...data.types];
+  const allColors = [...DEFAULT_COLORS, ...data.colors];
+  const cType = canonicalizeTerm(type, allTypes);
+  const cColor = color ? color.split(/[,،]/).map(s=>s.trim()).filter(Boolean).map(c=>canonicalizeTerm(c, allColors)).join('، ') : color;
+  return {type: cType, color: cColor};
+}
+
 function findNewCatalogTerms(type, color){
   const newTypes = [], newColors = [];
-  if(type && !data.types.includes(type) && !DEFAULT_TYPES.includes(type)) newTypes.push(type);
+  if(type && !data.types.some(t=>normalizeAr(t)===normalizeAr(type)) && !DEFAULT_TYPES.some(t=>normalizeAr(t)===normalizeAr(type))) newTypes.push(type);
   if(color){
     color.split(/[,،]/).map(s=>s.trim()).filter(Boolean).forEach(c=>{
-      if(!data.colors.includes(c) && !DEFAULT_COLORS.includes(c) && !newColors.includes(c)) newColors.push(c);
+      const exists = data.colors.some(x=>normalizeAr(x)===normalizeAr(c)) || DEFAULT_COLORS.some(x=>normalizeAr(x)===normalizeAr(c)) || newColors.some(x=>normalizeAr(x)===normalizeAr(c));
+      if(!exists) newColors.push(c);
     });
   }
   return {newTypes, newColors};
@@ -667,12 +755,16 @@ function rowsHtml(kind, arr){
     <td><button class="edit-link" onclick="editRecord('damaged', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('damaged', '${r.id}')">حذف</button></td>
   </tr>`).join('');
 }
+let inflowSearchTerm = '';
 function renderTable(kind){
   const body = document.getElementById(`${kind}-body`);
   const empty = document.getElementById(`${kind}-empty`);
   const count = document.getElementById(`${kind}-count`);
-  const arr = data[kind];
-  count.textContent = arr.length ? `${arr.length} سجل` : '';
+  let arr = data[kind];
+  if(kind==='inflow' && inflowSearchTerm){
+    arr = arr.filter(r => (r.invoiceNo||'').toLowerCase().includes(inflowSearchTerm));
+  }
+  count.textContent = arr.length ? `${arr.length} سجل` : (kind==='inflow' && inflowSearchTerm ? 'ما فيه نتائج' : '');
   if(!arr.length){ body.innerHTML=''; empty.style.display='block'; }
   else{ empty.style.display='none'; body.innerHTML = rowsHtml(kind, arr); }
 }
@@ -692,6 +784,10 @@ function wireForm(kind){
     const fd = new FormData(form);
     const record = {};
     for(const [k,v] of fd.entries()) record[k] = v;
+    if(record.type !== undefined){
+      const c = canonicalizeTypeColor(record.type, record.color);
+      record.type = c.type; record.color = c.color;
+    }
     record.addedBy = auth.currentUser ? auth.currentUser.email : '';
     record.addedAt = firebase.firestore.FieldValue.serverTimestamp();
     btn.disabled = true; btn.textContent = 'جاري الإضافة…';
@@ -778,7 +874,26 @@ function getAvgCostMap(){
   return avg;
 }
 
-function lowStockThreshold(unit){
+function renderAliases(){
+  const body = document.getElementById('alias-body');
+  const empty = document.getElementById('alias-empty');
+  if(!body) return;
+  const entries = Object.entries(data.aliases||{});
+  if(!entries.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = entries.sort((a,b)=>a[1].localeCompare(b[1],'ar')).map(([from,to])=>`<tr>
+    <td>${esc(from)}</td><td>${esc(to)}</td>
+    <td><button class="del" onclick="removeAlias('${esc(from)}')">حذف</button></td>
+  </tr>`).join('');
+}
+async function removeAlias(key){
+  try{
+    await withRetry(()=> db.collection('meta').doc('aliases').update({[key]: firebase.firestore.FieldValue.delete()}));
+    showToast('تم حذف الاسم البديل');
+  }catch(e){ showToast('تعذر الحذف', true); }
+}
+
+
   if(unit === 'غصن') return 20;
   return 2; // ربطة و حبة
 }
@@ -928,8 +1043,49 @@ function renderDailyPurchases(){
     <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.qty}</td><td>${r.cost.toFixed(2)} ر.س</td>
   </tr>`).join('');
 }
+function getOutflowByColor(records){
+  const map = {};
+  records.forEach(r=>{
+    const color = r.color || 'غير محدد';
+    const key = color+'|'+(r.unit||'غصن');
+    if(!map[key]) map[key] = { color, unit:r.unit||'غصن', qty:0 };
+    map[key].qty += Number(r.qty)||0;
+  });
+  return Object.values(map).sort((a,b)=> b.qty-a.qty);
+}
+function getOutflowByDestination(records){
+  const map = {};
+  records.forEach(r=>{
+    const dest = r.destination || 'غير محدد';
+    const key = dest+'|'+(r.unit||'غصن');
+    if(!map[key]) map[key] = { destination:dest, unit:r.unit||'غصن', qty:0 };
+    map[key].qty += Number(r.qty)||0;
+  });
+  return Object.values(map).sort((a,b)=> b.qty-a.qty);
+}
+function renderBreakdownTable(idPrefix, rows, labelKey){
+  const body = document.getElementById(`${idPrefix}-body`);
+  const empty = document.getElementById(`${idPrefix}-empty`);
+  const count = document.getElementById(`${idPrefix}-count`);
+  count.textContent = rows.length ? `${rows.length} صنف` : '';
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = rows.map(r=>`<tr><td>${esc(r[labelKey])}</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`).join('');
+}
+function renderDayColorDest(dateStr){
+  const dayOutflow = data.outflow.filter(r=>r.date===dateStr);
+  renderBreakdownTable('daily-color', getOutflowByColor(dayOutflow), 'color');
+  renderBreakdownTable('daily-dest', getOutflowByDestination(dayOutflow), 'destination');
+}
+function renderMonthColorDest(monthStr){
+  const monthOutflow = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
+  renderBreakdownTable('monthly-color', getOutflowByColor(monthOutflow), 'color');
+  renderBreakdownTable('monthly-dest', getOutflowByDestination(monthOutflow), 'destination');
+}
+
 function renderDailyReport(){
   const dateStr = document.getElementById('daily-date').value;
+  renderDayColorDest(dateStr);
   const recs = getDayRecords(dateStr);
   const body = document.getElementById('daily-body');
   const empty = document.getElementById('daily-empty');
@@ -979,6 +1135,7 @@ function getDayPurchasesByType(dateStr){
 }
 function renderMonthlyReport(){
   const monthStr = document.getElementById('monthly-month').value;
+  renderMonthColorDest(monthStr);
   const rows = getMonthAgg(monthStr);
   const body = document.getElementById('monthly-body');
   const empty = document.getElementById('monthly-empty');
@@ -1083,6 +1240,8 @@ function wireInvoiceFlow(){
     const fd = new FormData(itemForm);
     const item = { date: hdrDate, supplier: hdrSupplier, invoiceNo: hdrInvoiceNo, origin: hdrOrigin, _tempId: Date.now()+Math.floor(Math.random()*1000) };
     for(const [k,v] of fd.entries()) item[k] = v;
+    const c = canonicalizeTypeColor(item.type, item.color);
+    item.type = c.type; item.color = c.color;
     const invQty = Number(item.invoiceQty)||0;
     const gotQty = Number(item.qty)||0;
     item.shortageStatus = (invQty > gotQty) ? SHORTAGE_STATUSES[0] : '';
@@ -1258,6 +1417,10 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
   const fd = new FormData(form);
   const patch = {};
   for(const [k,v] of fd.entries()) patch[k] = v;
+  if(patch.type !== undefined){
+    const c = canonicalizeTypeColor(patch.type, patch.color);
+    patch.type = c.type; patch.color = c.color;
+  }
   if(Number(patch.qty) <= 0 || isNaN(Number(patch.qty))){
     showToast('الكمية لازم تكون رقم أكبر من صفر', true); return;
   }
@@ -1311,6 +1474,11 @@ wireForm('damaged');
 wireForm('opening');
 wireInvoiceFlow();
 
+document.getElementById('inflow-search').addEventListener('input', (e) => {
+  inflowSearchTerm = e.target.value.trim().toLowerCase();
+  renderTable('inflow');
+});
+
 document.getElementById('form-wa-settings').addEventListener('submit', async (e) => {
   e.preventDefault();
   const phone = document.getElementById('wa-phone').value.trim().replace(/[^0-9]/g,'');
@@ -1323,6 +1491,23 @@ document.getElementById('form-wa-settings').addEventListener('submit', async (e)
     showToast('تعذر الحفظ، حاول مرة ثانية', true);
   }
   btn.disabled = false; btn.textContent = 'حفظ الرقم';
+});
+
+document.getElementById('form-alias').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const from = document.getElementById('alias-from').value.trim();
+  const to = document.getElementById('alias-to').value.trim();
+  if(!from || !to) return;
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الإضافة…';
+  try{
+    await withRetry(()=> db.collection('meta').doc('aliases').set({[normalizeAr(from)]: to}, {merge:true}));
+    showToast('تمت إضافة الاسم البديل');
+    e.target.reset();
+  }catch(err){
+    showToast('تعذر الحفظ، حاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'إضافة';
 });
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
