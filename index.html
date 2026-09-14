@@ -290,6 +290,7 @@
   <div class="panel" id="panel-damaged">
     <div class="card">
       <h2>تسجيل ورد تالف</h2>
+      <p class="hint">حدد "مصدر التلف" صح: لو الورد تلف وهو لسه بالثلاجة الرئيسية اختر الخيار الأول (يخصم من الرصيد). لو تلف بعد ما عبده طلّعه للثلاجة الصغيرة أو بعد التحضير، اختر الخيار الثاني — هذا الورد أصلاً انخصم من الرصيد وقت "الخروج"، فما يُخصم مرة ثانية، بس يتسجل كخسارة للمتابعة.</p>
       <form id="form-damaged">
         <div><label>التاريخ</label><input type="date" name="date" required></div>
         <div><label>المورد <span class="opt">(اختياري)</span></label><input type="text" name="supplier" placeholder="اسم المورد"></div>
@@ -297,14 +298,20 @@
         <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors"></div>
         <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
         <div><label>الوحدة</label><select name="unit"><option>غصن</option><option>ربطة</option><option>حبة</option></select></div>
-        <div><label>سبب التلف</label><input type="text" name="reason" list="damageReasons" required></div>
+        <div class="full"><label>مصدر التلف</label>
+          <select name="damageSource">
+            <option value="before">قبل الخروج (تلف داخل الثلاجة الرئيسية)</option>
+            <option value="after">بعد الخروج (بالثلاجة الصغيرة / بعد التحضير)</option>
+          </select>
+        </div>
+        <div class="full"><label>سبب التلف</label><input type="text" name="reason" list="damageReasons" required></div>
         <div class="actions"><span></span><button type="submit" class="primary">إضافة السجل</button></div>
       </form>
     </div>
     <div class="table-card">
       <div class="table-head"><h3>سجل التالف</h3><span class="count" id="damaged-count"></span></div>
       <div class="table-scroll"><table>
-        <thead><tr><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>سبب التلف</th><th>أضافه</th><th></th></tr></thead>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>المصدر</th><th>سبب التلف</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="damaged-body"></tbody>
       </table></div>
       <div class="empty" id="damaged-empty" style="display:none">لا يوجد سجلات تالف بعد</div>
@@ -383,7 +390,7 @@
         <tbody id="balance-body"></tbody>
       </table></div>
       <div class="empty" id="balance-empty" style="display:none">أضف سجلات دخول أو رصيد افتتاحي عشان يظهر الرصيد</div>
-      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة وصلت للحد الأدنى (20 غصن أو 2 ربطة/حبة) — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—".</div>
+      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة وصلت للحد الأدنى (20 غصن أو 2 ربطة/حبة) — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—". عمود "التالف" هنا يشمل بس التلف المسجل "قبل الخروج" — التلف المسجل "بعد الخروج" ما يُخصم من هذا الرصيد لأنه أصلاً انخصم وقت الخروج، وتقدر تشوف إحصائياته بتبويب التقارير.</div>
     </div>
   </div>
 
@@ -447,6 +454,7 @@
       <div class="kpi"><div class="v" id="kpi-damaged">0</div><div class="l">إجمالي التالف هذا الشهر</div></div>
       <div class="kpi"><div class="v" id="kpi-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
       <div class="kpi"><div class="v" id="kpi-waste-cost">0 ر.س</div><div class="l">تكلفة الهالك التقديرية هذا الشهر</div></div>
+      <div class="kpi"><div class="v" id="kpi-post-exit">0%</div><div class="l">نسبة التلف بعد الخروج (من الصادر) — مؤشر جودة الثلاجة الصغيرة</div></div>
     </div>
 
     <div class="table-card">
@@ -752,11 +760,14 @@ function rowsHtml(kind, arr){
       <td><button class="edit-link" onclick="editRecord('outflow', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('outflow', '${r.id}')">حذف</button></td>
     </tr>`).join('');
   }
-  return sorted.map(r => `<tr>
+  return sorted.map(r => {
+    const srcLabel = r.damageSource==='after' ? 'بعد الخروج' : 'قبل الخروج';
+    return `<tr>
     <td>${fmtDate(r.date)}</td><td>${esc(r.supplier||'—')}</td><td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td>
-    <td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td><td class="notes">${esc(r.reason)}</td><td>${userTag(r)}</td>
+    <td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td><td>${srcLabel}</td><td class="notes">${esc(r.reason)}</td><td>${userTag(r)}</td>
     <td><button class="edit-link" onclick="editRecord('damaged', '${r.id}')">تعديل</button> <button class="del" onclick="removeRecord('damaged', '${r.id}')">حذف</button></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 let inflowSearchTerm = '';
 function renderTable(kind){
@@ -911,7 +922,7 @@ function renderBalance(){
   data.opening.forEach(r=> bump(r.type, r.color, r.unit, 'opening', r.qty));
   data.inflow.forEach(r=> bump(r.type, r.color, r.unit, 'in', r.qty));
   data.outflow.forEach(r=> bump(r.type, r.color, r.unit, 'out', r.qty));
-  data.damaged.forEach(r=> bump(r.type, r.color, r.unit, 'damaged', r.qty));
+  data.damaged.filter(r=> r.damageSource !== 'after').forEach(r=> bump(r.type, r.color, r.unit, 'damaged', r.qty));
   const rows = Object.values(map).sort((a,b)=> a.type.localeCompare(b.type,'ar'));
   const body = document.getElementById('balance-body');
   const empty = document.getElementById('balance-empty');
@@ -1154,6 +1165,9 @@ function renderMonthlyReport(){
     .reduce((s,r)=> s + (avgMap[groupKey3(r.type,r.color,r.unit)]||0) * (Number(r.qty)||0), 0);
   const purchases = data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr)
     .reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  const postExitQty = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr && r.damageSource==='after')
+    .reduce((s,r)=> s + (Number(r.qty)||0), 0);
+  const postExitPct = totalOut ? ((postExitQty/totalOut)*100).toFixed(1) : '0.0';
   document.getElementById('monthly-summary').textContent = rows.length ? `${rows.length} صنف نشط هذا الشهر` : 'ما فيه حركات بهذا الشهر';
   document.getElementById('monthly-kpis').style.display = rows.length ? 'grid' : 'none';
   document.getElementById('kpi-purchases').textContent = purchases.toFixed(0) + ' ر.س';
@@ -1162,6 +1176,7 @@ function renderMonthlyReport(){
   document.getElementById('kpi-damaged').textContent = totalDamaged;
   document.getElementById('kpi-waste').textContent = wastePct + '%';
   document.getElementById('kpi-waste-cost').textContent = wasteCost.toFixed(0) + ' ر.س';
+  document.getElementById('kpi-post-exit').textContent = postExitPct + '%';
   if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   body.innerHTML = rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('');
@@ -1371,6 +1386,9 @@ const FIELD_CONFIGS = {
     {name:'color', label:'اللون', type:'text', list:'flowerColors'},
     {name:'qty', label:'الكمية', type:'number', min:'1', required:true},
     {name:'unit', label:'الوحدة', type:'select', options:UNITS},
+    {name:'damageSource', label:'مصدر التلف', type:'select', options:[
+      {value:'before', label:'قبل الخروج (من الثلاجة الرئيسية)'}, {value:'after', label:'بعد الخروج (بالثلاجة الصغيرة)'}
+    ]},
     {name:'reason', label:'سبب التلف', type:'text', list:'damageReasons', required:true}
   ],
   opening: [
