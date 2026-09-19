@@ -158,7 +158,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:14px">
       <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">جاري التحميل…</span></div>
-      <div class="user-badge"><span id="user-email"></span><button id="logout-btn">تسجيل خروج</button></div>
+      <div class="user-badge"><span id="user-email"></span><button onclick="openSettingsModal()">⚙ الإعدادات</button><button onclick="openPasswordModal()">🔑 كلمة المرور</button><button id="logout-btn">تسجيل خروج</button></div>
     </div>
   </div>
 </div>
@@ -239,9 +239,20 @@
     <div class="table-card">
       <div class="table-head"><h3>سجل الدخول</h3>
         <div style="display:flex;align-items:center;gap:10px">
-          <input type="text" id="inflow-search" placeholder="ابحث برقم الفاتورة" style="width:180px;padding:6px 10px;font-size:12.5px">
+          <input type="text" id="inflow-search" placeholder="ابحث برقم الفاتورة أو الصنف" style="width:200px;padding:6px 10px;font-size:12.5px">
           <span class="count" id="inflow-count"></span>
         </div>
+      </div>
+      <div class="stock-alert" id="bulk-edit-bar" style="background:var(--blue-bg);border-color:#BFD9E6;margin:0;border-radius:0;flex-direction:column;align-items:stretch;">
+        <div class="msg" id="bulk-edit-msg" style="color:#25506b"></div>
+        <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:8px">
+          <div><label style="font-size:11.5px;color:#25506b;display:block;margin-bottom:4px">التاريخ الجديد</label><input type="date" id="bulk-edit-date" style="width:140px"></div>
+          <div><label style="font-size:11.5px;color:#25506b;display:block;margin-bottom:4px">المورد</label><input type="text" id="bulk-edit-supplier" style="width:140px" placeholder="بدون تغيير"></div>
+          <div><label style="font-size:11.5px;color:#25506b;display:block;margin-bottom:4px">رقم الفاتورة</label><input type="text" id="bulk-edit-invoiceno" style="width:120px" placeholder="بدون تغيير"></div>
+          <div><label style="font-size:11.5px;color:#25506b;display:block;margin-bottom:4px">بلد المنشأ</label><input type="text" id="bulk-edit-origin" list="originCountries" style="width:130px" placeholder="بدون تغيير"></div>
+          <button class="wa-btn" style="background:var(--leaf)" onclick="bulkUpdateInvoice()">تحديث الكل</button>
+        </div>
+        <div class="hint" style="margin:8px 0 0;color:#25506b">اترك أي حقل فاضي لو ما تبي تغيّره — يتحدث بس الحقول اللي تعبيها.</div>
       </div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>نوع الورد</th><th>اللون</th><th>المستلم</th><th>الوحدة</th><th>حسب الفاتورة</th><th>السعر المدخل</th><th>طريقة التسعير</th><th>شحن/جمارك للوحدة</th><th>التكلفة النهائية للوحدة</th><th>الإجمالي</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
@@ -277,7 +288,12 @@
       </form>
     </div>
     <div class="table-card">
-      <div class="table-head"><h3>سجل الخروج</h3><span class="count" id="outflow-count"></span></div>
+      <div class="table-head"><h3>سجل الخروج</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="outflow-search" placeholder="ابحث عن صنف" style="width:160px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="outflow-count"></span>
+        </div>
+      </div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الوجهة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="outflow-body"></tbody>
@@ -309,7 +325,12 @@
       </form>
     </div>
     <div class="table-card">
-      <div class="table-head"><h3>سجل التالف</h3><span class="count" id="damaged-count"></span></div>
+      <div class="table-head"><h3>سجل التالف</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="damaged-search" placeholder="ابحث عن صنف" style="width:160px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="damaged-count"></span>
+        </div>
+      </div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>المصدر</th><th>سبب التلف</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="damaged-body"></tbody>
@@ -333,28 +354,6 @@
 
   <!-- BALANCE -->
   <div class="panel" id="panel-balance">
-    <div class="card">
-      <h2>إعدادات تنبيه المخزون المنخفض</h2>
-      <p class="hint">الحد الأدنى قبل التنبيه: <strong>20 غصن</strong> للأصناف اللي تُدخل بالغصن، و<strong>2 ربطة</strong> للأصناف اللي تُدخل بالربطة أو الحبة. سجّل رقم واتساب هنا (بصيغة دولية بدون +، مثال: 9665XXXXXXXX) عشان يظهر زر الإرسال بالتنبيه.</p>
-      <form id="form-wa-settings" style="grid-template-columns:1fr auto">
-        <div><label>رقم واتساب للتنبيهات</label><input type="text" id="wa-phone" placeholder="9665XXXXXXXX"></div>
-        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">حفظ الرقم</button></div>
-      </form>
-    </div>
-    <div class="card">
-      <h2>أسماء بديلة (لو عبده يكتب الاسم بطريقة مختلفة)</h2>
-      <p class="hint">مثال: لو عبده يكتب "بيبي بروز" بدل "بيبي روز"، أضفها هنا مرة وحدة — وبعدها أي مرة يكتبها بنفس الطريقة، النظام يحوّلها تلقائياً للاسم الصحيح بكل التقارير والرصيد. ملاحظة: الفروق البسيطة بالهمزة (أحمر / احمر) تتوحد تلقائياً بدون ما تحتاج تضيفها هنا.</p>
-      <form id="form-alias" style="grid-template-columns:1fr 1fr auto">
-        <div><label>الاسم اللي يكتبه عبده</label><input type="text" id="alias-from" required placeholder="بيبي بروز"></div>
-        <div><label>الاسم الصحيح (القياسي)</label><input type="text" id="alias-to" required list="flowerTypes" placeholder="بيبي روز"></div>
-        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">إضافة</button></div>
-      </form>
-      <div class="table-scroll" style="margin-top:14px"><table>
-        <thead><tr><th>يكتبها عبده</th><th>تتحول إلى</th><th></th></tr></thead>
-        <tbody id="alias-body"></tbody>
-      </table></div>
-      <div class="empty" id="alias-empty" style="display:none">ما فيه أسماء بديلة مسجلة بعد</div>
-    </div>
     <div class="card">
       <h2>الرصيد الافتتاحي</h2>
       <p class="hint">تعبى مرة وحدة بس، لتسجيل الكمية الموجودة فعلياً بالثلاجة وقت ما تبدأون النظام. أي صنف يجيكم جديد بعد كذا ما يحتاج تضيفونه هنا — يكفي تسجلونه من "دخول الورد" عادي وبيبدأ رصيده من صفر ويتحدث تلقائي.</p>
@@ -383,14 +382,17 @@
     <div class="table-card">
       <div class="table-head">
         <h3>الرصيد الحالي حسب النوع واللون والوحدة</h3>
-        <span class="count">افتتاحي + وارد − صادر − تالف = الرصيد</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="balance-search" placeholder="ابحث عن صنف" style="width:160px;padding:6px 10px;font-size:12.5px">
+          <span class="count">افتتاحي + وارد − صادر − تالف = الرصيد</span>
+        </div>
       </div>
       <div class="table-scroll"><table>
         <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>افتتاحي</th><th>الوارد</th><th>الصادر</th><th>التالف</th><th>الرصيد الحالي</th><th>متوسط السعر شامل الضريبة</th><th>قيمة الرصيد</th></tr></thead>
         <tbody id="balance-body"></tbody>
       </table></div>
       <div class="empty" id="balance-empty" style="display:none">أضف سجلات دخول أو رصيد افتتاحي عشان يظهر الرصيد</div>
-      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة وصلت للحد الأدنى (20 غصن أو 2 ربطة/حبة) — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—". عمود "التالف" هنا يشمل بس التلف المسجل "قبل الخروج" — التلف المسجل "بعد الخروج" ما يُخصم من هذا الرصيد لأنه أصلاً انخصم وقت الخروج، وتقدر تشوف إحصائياته بتبويب التقارير.</div>
+      <div class="balance-note"><span class="badge-low">تنبيه</span>الصفوف المظللة وصلت للحد الأدنى (حسب الأرقام اللي حطيتها بـ"⚙ الإعدادات" — افتراضياً 20 غصن، 2 ربطة، 2 حبة، وكل وحدة مستقلة) — راجعها لإعادة الطلب من المورد. "متوسط السعر" يحسب من أسعار الدخول (بعد إضافة الضريبة حسب طريقة كل مورد) والرصيد الافتتاحي — لو ما تسجلون سعر لصنف معيّن بيظهر "—". عمود "التالف" هنا يشمل بس التلف المسجل "قبل الخروج" — التلف المسجل "بعد الخروج" ما يُخصم من هذا الرصيد لأنه أصلاً انخصم وقت الخروج، وتقدر تشوف إحصائياته بتبويب التقارير.</div>
     </div>
   </div>
 
@@ -414,6 +416,37 @@
       <h2>الأصناف الأعلى تكلفة هالك</h2>
       <p class="hint">أعلى 5 أصناف حسب القيمة التقديرية المفقودة بالريال (يحتاج تسجيل سعر الوحدة عند الدخول)</p>
       <ul class="rank-list" id="top-damaged-cost"></ul>
+    </div>
+
+    <div class="card">
+      <h2>تقرير حسب فترة مخصصة</h2>
+      <p class="hint">اختر أي فترة من تاريخ إلى تاريخ (مو بالضرورة شهر كامل) — مفيد لفترة موسم معيّن أو مطابقة فاتورة محاسب.</p>
+      <form id="form-range-report" style="grid-template-columns:1fr 1fr auto">
+        <div><label>من تاريخ</label><input type="date" id="range-from" required></div>
+        <div><label>إلى تاريخ</label><input type="date" id="range-to" required></div>
+        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">عرض التقرير</button></div>
+      </form>
+      <div class="actions" style="margin-top:10px;display:none" id="range-summary-row">
+        <span id="range-summary" class="hint" style="margin:0"></span>
+        <div class="exp">
+          <button class="ghost" onclick="exportRange('ar')">تصدير Excel (عربي)</button>
+          <button class="ghost" onclick="exportRange('en')">Export Excel (English)</button>
+        </div>
+      </div>
+    </div>
+    <div class="kpis" id="range-kpis" style="display:none">
+      <div class="kpi"><div class="v" id="kpi-range-purchases">0 ر.س</div><div class="l">إجمالي المشتريات بالفترة</div></div>
+      <div class="kpi"><div class="v" id="kpi-range-in">0</div><div class="l">إجمالي الوارد</div></div>
+      <div class="kpi"><div class="v" id="kpi-range-out">0</div><div class="l">إجمالي الصادر</div></div>
+      <div class="kpi"><div class="v" id="kpi-range-damaged">0</div><div class="l">إجمالي التالف</div></div>
+      <div class="kpi"><div class="v" id="kpi-range-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
+    </div>
+    <div class="table-card" id="range-table-card" style="display:none">
+      <div class="table-head"><h3>تفاصيل الفترة المحددة حسب النوع واللون</h3><span class="count" id="range-count"></span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>إجمالي الوارد</th><th>تكلفة المشتريات</th><th>إجمالي الصادر</th><th>إجمالي التالف</th></tr></thead>
+        <tbody id="range-body"></tbody>
+      </table></div>
     </div>
 
     <div class="subgrid">
@@ -543,6 +576,59 @@
     <form id="edit-form"></form>
   </div>
 </div>
+
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-card" style="max-width:640px">
+    <div class="modal-head"><h3>الإعدادات</h3><button class="modal-close" onclick="closeSettingsModal()">✕</button></div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h2>حدود تنبيه المخزون المنخفض</h2>
+      <p class="hint">كل وحدة لها حدها الخاص المستقل — الحبة ما تُعامل زي الربطة إلا لو حطيت لها نفس الرقم بنفسك.</p>
+      <form id="form-thresholds" style="grid-template-columns:repeat(3,1fr)">
+        <div><label>غصن</label><input type="number" id="th-ghusn" min="0" value="20" required></div>
+        <div><label>ربطة</label><input type="number" id="th-rabta" min="0" value="2" required></div>
+        <div><label>حبة</label><input type="number" id="th-habba" min="0" value="2" required></div>
+        <div class="actions full"><span></span><button type="submit" class="primary">حفظ الحدود</button></div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h2>رقم واتساب للتنبيهات</h2>
+      <p class="hint">سجّل رقم واتساب هنا (بصيغة دولية بدون +، مثال: 9665XXXXXXXX) عشان يظهر زر الإرسال بشريط التنبيه.</p>
+      <form id="form-wa-settings" style="grid-template-columns:1fr auto">
+        <div><label>رقم واتساب للتنبيهات</label><input type="text" id="wa-phone" placeholder="9665XXXXXXXX"></div>
+        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">حفظ الرقم</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>أسماء بديلة (لو عبده يكتب الاسم بطريقة مختلفة)</h2>
+      <p class="hint">مثال: لو عبده يكتب "بيبي بروز" بدل "بيبي روز"، أضفها هنا مرة وحدة — وبعدها أي مرة يكتبها بنفس الطريقة، النظام يحوّلها تلقائياً للاسم الصحيح بكل التقارير والرصيد. ملاحظة: الفروق البسيطة بالهمزة (أحمر / احمر) تتوحد تلقائياً بدون ما تحتاج تضيفها هنا.</p>
+      <form id="form-alias" style="grid-template-columns:1fr 1fr auto">
+        <div><label>الاسم اللي يكتبه عبده</label><input type="text" id="alias-from" required placeholder="بيبي بروز"></div>
+        <div><label>الاسم الصحيح (القياسي)</label><input type="text" id="alias-to" required list="flowerTypes" placeholder="بيبي روز"></div>
+        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">إضافة</button></div>
+      </form>
+      <div class="table-scroll" style="margin-top:14px"><table>
+        <thead><tr><th>يكتبها عبده</th><th>تتحول إلى</th><th></th></tr></thead>
+        <tbody id="alias-body"></tbody>
+      </table></div>
+      <div class="empty" id="alias-empty" style="display:none">ما فيه أسماء بديلة مسجلة بعد</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="password-modal">
+  <div class="modal-card" style="max-width:380px">
+    <div class="modal-head"><h3>تغيير كلمة المرور</h3><button class="modal-close" onclick="closePasswordModal()">✕</button></div>
+    <form id="form-password">
+      <div class="full"><label>كلمة المرور الجديدة</label><input type="password" id="new-password" minlength="6" required></div>
+      <div class="full"><label>تأكيد كلمة المرور</label><input type="password" id="confirm-password" minlength="6" required></div>
+      <div class="login-error" id="password-error"></div>
+      <div class="actions"><span></span><button type="submit" class="primary">حفظ كلمة المرور</button></div>
+    </form>
+  </div>
+</div>
 </div>
 
 <script>
@@ -560,7 +646,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
-let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{} };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{}, thresholds:{ghusn:20,rabta:2,habba:2} };
 
 const DEFAULT_TYPES = ['رز هولندي','رز اكوادوري','توليب','اوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
 const DEFAULT_COLORS = ['احمر','ابيض','وردي','اصفر','برتقالي','بنفسجي','مشكل'];
@@ -639,6 +725,14 @@ function attachListeners(){
     data.alertPhone = s.alertPhone || '';
     const phoneInput = document.getElementById('wa-phone');
     if(phoneInput && document.activeElement !== phoneInput) phoneInput.value = data.alertPhone;
+    const th = s.thresholds || {};
+    data.thresholds.ghusn = th.ghusn!==undefined ? th.ghusn : 20;
+    data.thresholds.rabta = th.rabta!==undefined ? th.rabta : 2;
+    data.thresholds.habba = th.habba!==undefined ? th.habba : 2;
+    ['ghusn','rabta','habba'].forEach(k=>{
+      const el = document.getElementById(`th-${k}`);
+      if(el && document.activeElement !== el) el.value = data.thresholds[k];
+    });
     renderBalance();
   }, err=>{});
   db.collection('meta').doc('aliases').onSnapshot(doc=>{
@@ -770,17 +864,77 @@ function rowsHtml(kind, arr){
   }).join('');
 }
 let inflowSearchTerm = '';
+let lastInflowSearchResults = [];
+let outflowSearchTerm = '';
+let damagedSearchTerm = '';
+let balanceSearchTerm = '';
+function matchesItemSearch(r, term){
+  if(!term) return true;
+  const hay = normalizeAr((r.type||'')+' '+(r.color||''));
+  return hay.includes(normalizeAr(term));
+}
 function renderTable(kind){
   const body = document.getElementById(`${kind}-body`);
   const empty = document.getElementById(`${kind}-empty`);
   const count = document.getElementById(`${kind}-count`);
   let arr = data[kind];
   if(kind==='inflow' && inflowSearchTerm){
-    arr = arr.filter(r => (r.invoiceNo||'').toLowerCase().includes(inflowSearchTerm));
+    const t = inflowSearchTerm;
+    arr = arr.filter(r => (r.invoiceNo||'').toLowerCase().includes(t) || matchesItemSearch(r, t));
   }
-  count.textContent = arr.length ? `${arr.length} سجل` : (kind==='inflow' && inflowSearchTerm ? 'ما فيه نتائج' : '');
+  if(kind==='outflow' && outflowSearchTerm){
+    arr = arr.filter(r => matchesItemSearch(r, outflowSearchTerm));
+  }
+  if(kind==='damaged' && damagedSearchTerm){
+    arr = arr.filter(r => matchesItemSearch(r, damagedSearchTerm));
+  }
+  if(kind==='inflow'){
+    lastInflowSearchResults = arr;
+    const bar = document.getElementById('bulk-edit-bar');
+    const msg = document.getElementById('bulk-edit-msg');
+    if(inflowSearchTerm && arr.length){
+      bar.classList.add('show');
+      msg.innerHTML = `<strong>${arr.length} صنف</strong> بنفس نتيجة البحث — عبّي أي حقل بالأسفل تبي تغيّره لكل الأصناف دفعة وحدة (التاريخ، المورد، رقم الفاتورة، أو بلد المنشأ). الحقول الخاصة بكل صنف لحاله (النوع، اللون، الكمية، السعر...) عدّلها من زر "تعديل" بالجدول.`;
+    } else {
+      bar.classList.remove('show');
+    }
+  }
+  count.textContent = arr.length ? `${arr.length} سجل` : ((kind==='inflow'&&inflowSearchTerm)||(kind==='outflow'&&outflowSearchTerm)||(kind==='damaged'&&damagedSearchTerm) ? 'ما فيه نتائج' : '');
   if(!arr.length){ body.innerHTML=''; empty.style.display='block'; }
   else{ empty.style.display='none'; body.innerHTML = rowsHtml(kind, arr); }
+}
+async function bulkUpdateInvoice(){
+  const newDate = document.getElementById('bulk-edit-date').value;
+  const newSupplier = document.getElementById('bulk-edit-supplier').value.trim();
+  const newInvoiceNo = document.getElementById('bulk-edit-invoiceno').value.trim();
+  const newOrigin = document.getElementById('bulk-edit-origin').value.trim();
+  const patch = {};
+  if(newDate) patch.date = newDate;
+  if(newSupplier) patch.supplier = newSupplier;
+  if(newInvoiceNo) patch.invoiceNo = newInvoiceNo;
+  if(newOrigin) patch.origin = newOrigin;
+  if(!Object.keys(patch).length){ showToast('عبّي حقل واحد على الأقل تبي تغيّره', true); return; }
+  if(!lastInflowSearchResults.length){ showToast('ما فيه نتائج بحث حالياً', true); return; }
+  try{
+    await withRetry(async ()=>{
+      const batch = db.batch();
+      lastInflowSearchResults.forEach(r=>{
+        batch.update(db.collection(KEYS.inflow).doc(r.id), patch);
+      });
+      await batch.commit();
+    });
+    showToast(`تم تحديث ${lastInflowSearchResults.length} صنف`);
+    if(newInvoiceNo){
+      document.getElementById('inflow-search').value = newInvoiceNo;
+      inflowSearchTerm = newInvoiceNo.toLowerCase();
+    }
+    document.getElementById('bulk-edit-date').value = '';
+    document.getElementById('bulk-edit-supplier').value = '';
+    document.getElementById('bulk-edit-invoiceno').value = '';
+    document.getElementById('bulk-edit-origin').value = '';
+  }catch(err){
+    showToast('تعذر التحديث، تأكد من الاتصال وحاول مرة ثانية', true);
+  }
 }
 
 async function removeRecord(kind, id){
@@ -909,8 +1063,9 @@ async function removeAlias(key){
 
 
 function lowStockThreshold(unit){
-  if(unit === 'غصن') return 20;
-  return 2; // ربطة و حبة
+  if(unit === 'غصن') return Number(data.thresholds.ghusn);
+  if(unit === 'ربطة') return Number(data.thresholds.rabta);
+  return Number(data.thresholds.habba); // حبة، منفصلة تماماً عن الربطة
 }
 function renderBalance(){
   const map = {};
@@ -931,13 +1086,21 @@ function renderBalance(){
   empty.style.display='none';
   let totalValue = 0;
   const lowRows = [];
-  body.innerHTML = rows.map(r=>{
+  rows.forEach(r=>{
     const balance = r.opening + r.in - r.out - r.damaged;
     const low = balance < lowStockThreshold(r.unit);
     if(low) lowRows.push({...r, balance});
     const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
     const value = avg ? balance*avg : null;
     if(value) totalValue += value;
+  });
+  const displayRows = balanceSearchTerm ? rows.filter(r=>matchesItemSearch(r, balanceSearchTerm)) : rows;
+  if(!displayRows.length){ body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--ink-soft);padding:20px">ما فيه نتائج مطابقة للبحث</td></tr>'; }
+  else body.innerHTML = displayRows.map(r=>{
+    const balance = r.opening + r.in - r.out - r.damaged;
+    const low = balance < lowStockThreshold(r.unit);
+    const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
+    const value = avg ? balance*avg : null;
     return `<tr class="${low?'low':''}">
       <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.opening}</td><td>${r.in}</td><td>${r.out}</td><td>${r.damaged}</td>
       <td><strong>${balance}</strong>${low?'<span class="badge-low">منخفض</span>':''}</td>
@@ -1137,6 +1300,86 @@ function getMonthAgg(monthStr){
   data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
   data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
   return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
+}
+function getMonthAgg(monthStr){
+  const map = {};
+  const bump=(type,color,unit,field,qty)=>{
+    const key=groupKey3(type,color,unit);
+    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
+    map[key][field]+=Number(qty)||0;
+  };
+  data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>{
+    bump(r.type,r.color,r.unit,'in',r.qty);
+    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
+  });
+  data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
+  data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
+  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
+}
+function inDateRange(dateStr, from, to){
+  return dateStr && dateStr>=from && dateStr<=to;
+}
+function getRangeAgg(from, to){
+  const map = {};
+  const bump=(type,color,unit,field,qty)=>{
+    const key=groupKey3(type,color,unit);
+    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
+    map[key][field]+=Number(qty)||0;
+  };
+  data.inflow.filter(r=>inDateRange(r.date,from,to)).forEach(r=>{
+    bump(r.type,r.color,r.unit,'in',r.qty);
+    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
+  });
+  data.outflow.filter(r=>inDateRange(r.date,from,to)).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
+  data.damaged.filter(r=>inDateRange(r.date,from,to)).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
+  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
+}
+function renderRangeReport(from, to){
+  const rows = getRangeAgg(from, to);
+  const body = document.getElementById('range-body');
+  const count = document.getElementById('range-count');
+  const totalIn = rows.reduce((s,r)=>s+r.in,0);
+  const totalOut = rows.reduce((s,r)=>s+r.out,0);
+  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
+  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
+  const purchases = data.inflow.filter(r=>inDateRange(r.date,from,to)).reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  document.getElementById('kpi-range-purchases').textContent = purchases.toFixed(0) + ' ر.س';
+  document.getElementById('kpi-range-in').textContent = totalIn;
+  document.getElementById('kpi-range-out').textContent = totalOut;
+  document.getElementById('kpi-range-damaged').textContent = totalDamaged;
+  document.getElementById('kpi-range-waste').textContent = wastePct + '%';
+  document.getElementById('range-kpis').style.display = 'grid';
+  document.getElementById('range-table-card').style.display = 'block';
+  document.getElementById('range-summary-row').style.display = 'flex';
+  document.getElementById('range-summary').textContent = rows.length ? `${rows.length} صنف بين ${fmtDate(from)} و${fmtDate(to)}` : 'ما فيه حركات بهذي الفترة';
+  count.textContent = rows.length ? `${rows.length} صنف` : '';
+  body.innerHTML = rows.length
+    ? rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px">ما فيه حركات بهذي الفترة</td></tr>';
+}
+function exportRange(lang){
+  const from = document.getElementById('range-from').value;
+  const to = document.getElementById('range-to').value;
+  if(!from || !to){ showToast('اختر الفترة أول', true); return; }
+  const rows = getRangeAgg(from, to);
+  const H = T.headers;
+  const header = lang==='ar'
+    ? [H.type[0],H.color[0],H.unit[0],H.inTotal[0],H.purchaseCost[0],H.outTotal[0],H.damagedTotal[0]]
+    : [H.type[1],H.color[1],H.unit[1],H.inTotal[1],H.purchaseCost[1],H.outTotal[1],H.damagedTotal[1]];
+  const body = rows.map(r=> lang==='ar'
+    ? [r.type, r.color, r.unit, r.in, r.cost.toFixed(2), r.out, r.damaged]
+    : [tr(T.type,r.type), tr(T.color,r.color), tr(T.unit,r.unit), r.in, r.cost.toFixed(2), r.out, r.damaged]
+  );
+  const totalIn = rows.reduce((s,r)=>s+r.in,0);
+  const totalOut = rows.reduce((s,r)=>s+r.out,0);
+  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
+  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
+  const purchases = data.inflow.filter(r=>inDateRange(r.date,from,to)).reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
+  const summaryRows = lang==='ar'
+    ? [[`من: ${from} إلى: ${to}`],[`إجمالي مشتريات الورد: ${purchases.toFixed(0)} ر.س`],[`إجمالي الوارد: ${totalIn}`],[`إجمالي الصادر: ${totalOut}`],[`إجمالي التالف: ${totalDamaged}`],[`نسبة الهالك: ${wastePct}%`],[]]
+    : [[`From: ${from} To: ${to}`],[`Total Purchases: ${purchases.toFixed(0)} SAR`],[`Total In: ${totalIn}`],[`Total Out: ${totalOut}`],[`Total Damaged: ${totalDamaged}`],[`Waste Rate: ${wastePct}%`],[]];
+  downloadSheet([...summaryRows, header, ...body], `range-report-${from}_to_${to}-${lang}.xlsx`, lang==='ar');
+  showToast('تم تصدير تقرير الفترة');
 }
 function getDayPurchasesByType(dateStr){
   const map = {};
@@ -1432,6 +1675,59 @@ function editRecord(kind, id){
 function closeEditModal(){
   document.getElementById('edit-modal').style.display = 'none';
 }
+function openSettingsModal(){
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+function closeSettingsModal(){
+  document.getElementById('settings-modal').style.display = 'none';
+}
+function openPasswordModal(){
+  document.getElementById('password-error').textContent = '';
+  document.getElementById('form-password').reset();
+  document.getElementById('password-modal').style.display = 'flex';
+}
+function closePasswordModal(){
+  document.getElementById('password-modal').style.display = 'none';
+}
+document.getElementById('form-password').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const p1 = document.getElementById('new-password').value;
+  const p2 = document.getElementById('confirm-password').value;
+  const errEl = document.getElementById('password-error');
+  errEl.textContent = '';
+  if(p1 !== p2){ errEl.textContent = 'كلمتا المرور غير متطابقتين'; return; }
+  if(p1.length < 6){ errEl.textContent = 'كلمة المرور لازم تكون 6 أحرف على الأقل'; return; }
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    await auth.currentUser.updatePassword(p1);
+    showToast('تم تغيير كلمة المرور بنجاح');
+    closePasswordModal();
+  }catch(err){
+    if(err.code === 'auth/requires-recent-login'){
+      errEl.textContent = 'لأسباب أمنية، سجّل خروج ودخول مرة ثانية بكلمة مرورك الحالية، ثم جرّب تغييرها فوراً.';
+    }else{
+      errEl.textContent = 'تعذر تغيير كلمة المرور، حاول مرة ثانية';
+    }
+  }
+  btn.disabled = false; btn.textContent = 'حفظ كلمة المرور';
+});
+document.getElementById('form-thresholds').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ghusn = Number(document.getElementById('th-ghusn').value);
+  const rabta = Number(document.getElementById('th-rabta').value);
+  const habba = Number(document.getElementById('th-habba').value);
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    await withRetry(()=> db.collection('meta').doc('settings').set({thresholds:{ghusn,rabta,habba}}, {merge:true}));
+    showToast('تم حفظ الحدود');
+  }catch(err){
+    showToast('تعذر الحفظ، حاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ الحدود';
+});
+
 document.getElementById('edit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
@@ -1496,9 +1792,30 @@ wireForm('damaged');
 wireForm('opening');
 wireInvoiceFlow();
 
+document.getElementById('form-range-report').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const from = document.getElementById('range-from').value;
+  const to = document.getElementById('range-to').value;
+  if(!from || !to){ showToast('اختر التاريخين أول', true); return; }
+  if(from > to){ showToast('"من تاريخ" لازم يكون قبل "إلى تاريخ"', true); return; }
+  renderRangeReport(from, to);
+});
+
 document.getElementById('inflow-search').addEventListener('input', (e) => {
   inflowSearchTerm = e.target.value.trim().toLowerCase();
   renderTable('inflow');
+});
+document.getElementById('outflow-search').addEventListener('input', (e) => {
+  outflowSearchTerm = e.target.value.trim();
+  renderTable('outflow');
+});
+document.getElementById('damaged-search').addEventListener('input', (e) => {
+  damagedSearchTerm = e.target.value.trim();
+  renderTable('damaged');
+});
+document.getElementById('balance-search').addEventListener('input', (e) => {
+  balanceSearchTerm = e.target.value.trim();
+  renderBalance();
 });
 
 document.getElementById('form-wa-settings').addEventListener('submit', async (e) => {
