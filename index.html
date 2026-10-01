@@ -178,7 +178,7 @@
     <button class="tab" data-tab="damaged">الورد التالف</button>
     <button class="tab" data-tab="shortage">متابعة النواقص<span class="badge" id="shortage-badge" style="display:none"></span></button>
     <button class="tab" data-tab="balance">الرصيد الحالي</button>
-    <button class="tab" data-tab="reports">التقارير</button>
+    <button class="tab" data-tab="reports" id="reports-tab-btn">التقارير</button>
     <button class="tab" data-tab="invoices" id="invoices-tab-btn" style="display:none">الفواتير</button>
   </div>
 
@@ -444,6 +444,17 @@
       <div class="kpi"><div class="v" id="kpi-range-damaged">0</div><div class="l">إجمالي التالف</div></div>
       <div class="kpi"><div class="v" id="kpi-range-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
     </div>
+    <div class="subgrid" id="range-ranklists" style="display:none">
+      <div class="card">
+        <h2>الأصناف الأكثر استهلاكاً بالفترة</h2>
+        <ul class="rank-list" id="range-top-consumed"></ul>
+      </div>
+      <div class="card">
+        <h2>الأصناف الأكثر تلفاً بالفترة</h2>
+        <ul class="rank-list" id="range-top-damaged"></ul>
+      </div>
+    </div>
+
     <div class="table-card" id="range-table-card" style="display:none">
       <div class="table-head"><h3>تفاصيل الفترة المحددة حسب النوع واللون</h3><span class="count" id="range-count"></span></div>
       <div class="table-scroll"><table>
@@ -541,6 +552,17 @@
         <tbody id="daily-body"></tbody>
       </table></div>
       <div class="empty" id="daily-empty" style="display:none">ما فيه حركات مسجلة بهذا التاريخ</div>
+    </div>
+
+    <div class="subgrid" id="monthly-ranklists" style="display:none">
+      <div class="card">
+        <h2>الأصناف الأكثر استهلاكاً هذا الشهر</h2>
+        <ul class="rank-list" id="monthly-top-consumed"></ul>
+      </div>
+      <div class="card">
+        <h2>الأصناف الأكثر تلفاً هذا الشهر</h2>
+        <ul class="rank-list" id="monthly-top-damaged"></ul>
+      </div>
     </div>
 
     <div class="subgrid">
@@ -670,8 +692,8 @@
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h2>مين يشوف تبويب "الفواتير"</h2>
-      <p class="hint">إيميلات المسؤولين المصرّح لهم بتبويب "الفواتير" (الأسعار ومقارنة الموردين) — سطر لكل إيميل. باقي المستخدمين (مثل عبده) يستمرون يسجلون الدخول عادي ويدخلون الأسعار، بس ما يشوفون هذا التبويب. لو تركت الحقل فاضي، يظهر التبويب للجميع مؤقتاً.</p>
+      <h2>مين يشوف تبويبي "التقارير" و"الفواتير"</h2>
+      <p class="hint">إيميلات المسؤولين المصرّح لهم بتبويبي "التقارير" و"الفواتير" (الأسعار، مقارنة الموردين، تحليل الاستهلاك) — سطر لكل إيميل. باقي المستخدمين (مثل عبده) يستمرون يسجلون الدخول عادي ويدخلون البيانات والأسعار بالتبويبات التشغيلية، بس ما يشوفون هذين التبويبين. لو تركت الحقل فاضي، يظهران للجميع مؤقتاً.</p>
       <form id="form-admins" style="grid-template-columns:1fr">
         <div><label>الإيميلات (سطر لكل إيميل)</label><textarea id="admin-emails" rows="3" style="width:100%;font-family:'Cairo',sans-serif;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:7px" placeholder="algobiry2016@gmail.com&#10;saud@example.com"></textarea></div>
         <div class="actions"><span></span><button type="submit" class="primary">حفظ القائمة</button></div>
@@ -822,11 +844,15 @@ function isAdmin(){
   return data.adminEmails.map(e=>e.trim().toLowerCase()).includes(email);
 }
 function updateInvoicesTabVisibility(){
-  const btn = document.getElementById('invoices-tab-btn');
   const admin = isAdmin();
-  btn.style.display = admin ? 'inline-block' : 'none';
-  if(!admin && document.getElementById('panel-invoices').classList.contains('active')){
-    document.querySelector('.tab[data-tab="inflow"]').click();
+  const invBtn = document.getElementById('invoices-tab-btn');
+  const repBtn = document.getElementById('reports-tab-btn');
+  invBtn.style.display = admin ? 'inline-block' : 'none';
+  repBtn.style.display = admin ? 'inline-block' : 'none';
+  if(!admin){
+    const restrictedActive = document.getElementById('panel-invoices').classList.contains('active')
+      || document.getElementById('panel-reports').classList.contains('active');
+    if(restrictedActive) document.querySelector('.tab[data-tab="inflow"]').click();
   }
 }
 
@@ -1466,6 +1492,11 @@ function renderRangeReport(from, to){
   body.innerHTML = rows.length
     ? rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px">ما فيه حركات بهذي الفترة</td></tr>';
+  const rangeOutflow = data.outflow.filter(r=>inDateRange(r.date,from,to));
+  const rangeDamaged = data.damaged.filter(r=>inDateRange(r.date,from,to));
+  document.getElementById('range-ranklists').style.display = 'grid';
+  renderRankList('range-top-consumed', aggByTypeUnit(rangeOutflow), '');
+  renderRankList('range-top-damaged', aggByTypeUnit(rangeDamaged), 'damaged');
 }
 function exportRange(lang){
   const from = document.getElementById('range-from').value;
@@ -1530,18 +1561,27 @@ function renderMonthlyReport(){
   document.getElementById('kpi-waste').textContent = wastePct + '%';
   document.getElementById('kpi-waste-cost').textContent = wasteCost.toFixed(0) + ' ر.س';
   document.getElementById('kpi-post-exit').textContent = postExitPct + '%';
+  const monthOutflow = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
+  const monthDamaged = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr);
+  document.getElementById('monthly-ranklists').style.display = 'grid';
+  renderRankList('monthly-top-consumed', aggByTypeUnit(monthOutflow), '');
+  renderRankList('monthly-top-damaged', aggByTypeUnit(monthDamaged), 'damaged');
   if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   body.innerHTML = rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('');
 }
 
 function downloadSheet(aoa, filename, rtl){
-  // Physically reverse column order for Arabic so the first logical column
-  // (e.g. التاريخ) lands in the rightmost cell even in viewers that ignore
-  // the sheet-view RTL flag — more reliable across Excel/Sheets/WPS/LibreOffice.
-  const finalAoa = rtl ? aoa.map(row => Array.isArray(row) ? [...row].reverse() : row) : aoa;
-  const ws = XLSX.utils.aoa_to_sheet(finalAoa);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
+  if(rtl){
+    // Set RTL at both the worksheet view AND the workbook level — Excel
+    // reads either depending on version, so setting both is the reliable combo.
+    // With RTL on and NORMAL (non-reversed) column order, column A (first
+    // logical column, e.g. التاريخ) renders at the right edge, as expected.
+    ws['!views'] = [{ RTL: true }];
+    wb.Workbook = { Views: [{ RTL: true }] };
+  }
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, filename);
 }
