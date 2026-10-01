@@ -179,6 +179,7 @@
     <button class="tab" data-tab="shortage">متابعة النواقص<span class="badge" id="shortage-badge" style="display:none"></span></button>
     <button class="tab" data-tab="balance">الرصيد الحالي</button>
     <button class="tab" data-tab="reports">التقارير</button>
+    <button class="tab" data-tab="invoices" id="invoices-tab-btn" style="display:none">الفواتير</button>
   </div>
 
   <!-- INFLOW -->
@@ -261,16 +262,6 @@
         <tbody id="inflow-body"></tbody>
       </table></div>
       <div class="empty" id="inflow-empty" style="display:none">لا يوجد سجلات دخول بعد</div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-head"><h3>سجل الفواتير</h3><span class="count" id="invoice-log-count"></span></div>
-      <p class="hint" style="padding:0 18px 10px">كل فاتورة كسطر واحد (مجموع كل أصنافها) — "تعديل" يفتح لك بحث الفاتورة بالأعلى لتعديل الحقول المشتركة دفعة وحدة، و"حذف الفاتورة كاملة" يمسح كل أصنافها مرة وحدة.</p>
-      <div class="table-scroll"><table>
-        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>عدد الأصناف</th><th>إجمالي الكمية</th><th>إجمالي القيمة</th><th></th></tr></thead>
-        <tbody id="invoice-log-body"></tbody>
-      </table></div>
-      <div class="empty" id="invoice-log-empty" style="display:none">ما فيه فواتير مسجلة بعد</div>
     </div>
   </div>
 
@@ -430,21 +421,6 @@
       <ul class="rank-list" id="top-damaged-cost"></ul>
     </div>
 
-    <div class="table-card">
-      <div class="table-head"><h3>مقارنة أسعار الموردين لنفس الصنف</h3>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="text" id="price-compare-search" placeholder="فلتر بالصنف (اختياري)" style="width:180px;padding:6px 10px;font-size:12.5px">
-          <span class="count" id="price-compare-count"></span>
-        </div>
-      </div>
-      <p class="hint" style="padding:0 18px 10px">مرتبة حسب الصنف واللون عشان تقارن بسهولة بين الموردين والدفعات المختلفة لنفس الصنف. بس الأسطر اللي فيها سعر مسجّل تظهر هنا.</p>
-      <div class="table-scroll"><table>
-        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>المورد</th><th>التاريخ</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>السعر قبل الضريبة</th><th>السعر النهائي (شامل الضريبة والشحن)</th></tr></thead>
-        <tbody id="price-compare-body"></tbody>
-      </table></div>
-      <div class="empty" id="price-compare-empty" style="display:none">ما فيه أسعار مسجلة بعد، أو ما فيه نتائج مطابقة للفلتر</div>
-    </div>
-
     <div class="card">
       <h2>تقرير حسب فترة مخصصة</h2>
       <p class="hint">اختر أي فترة من تاريخ إلى تاريخ (مو بالضرورة شهر كامل) — مفيد لفترة موسم معيّن أو مطابقة فاتورة محاسب.</p>
@@ -497,6 +473,10 @@
         <form id="form-monthly-report" style="grid-template-columns:1fr;">
           <div><label>الشهر</label><input type="month" name="month" id="monthly-month" required></div>
         </form>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="ghost" type="button" onclick="setMonthlyQuick(0)">هذا الشهر</button>
+          <button class="ghost" type="button" onclick="setMonthlyQuick(1)">الشهر السابق</button>
+        </div>
         <div class="actions" style="margin-top:10px">
           <span id="monthly-summary" class="hint" style="margin:0"></span>
           <div class="exp">
@@ -601,6 +581,34 @@
     </div>
   </div>
 
+  <!-- INVOICES (admin-only: owner + Saud) -->
+  <div class="panel" id="panel-invoices">
+    <div class="table-card">
+      <div class="table-head"><h3>سجل الفواتير</h3><span class="count" id="invoice-log-count"></span></div>
+      <p class="hint" style="padding:0 18px 10px">كل فاتورة كسطر واحد (مجموع كل أصنافها) — "تعديل" يفتح لك بحث الفاتورة بتبويب "دخول الورد" لتعديل الحقول المشتركة دفعة وحدة، و"حذف الفاتورة كاملة" يمسح كل أصنافها مرة وحدة.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>عدد الأصناف</th><th>إجمالي الكمية</th><th>إجمالي القيمة</th><th></th></tr></thead>
+        <tbody id="invoice-log-body"></tbody>
+      </table></div>
+      <div class="empty" id="invoice-log-empty" style="display:none">ما فيه فواتير مسجلة بعد</div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h3>مقارنة أسعار الموردين لنفس الصنف</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="price-compare-search" placeholder="فلتر بالصنف (اختياري)" style="width:180px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="price-compare-count"></span>
+        </div>
+      </div>
+      <p class="hint" style="padding:0 18px 10px">مرتبة حسب الصنف واللون عشان تقارن بسهولة بين الموردين والدفعات المختلفة لنفس الصنف — شوف هل سعر مورد معيّن زاد أو نقص بمرور الوقت. بس الأسطر اللي فيها سعر مسجّل تظهر هنا.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>المورد</th><th>التاريخ</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>السعر قبل الضريبة</th><th>السعر النهائي (شامل الضريبة والشحن)</th></tr></thead>
+        <tbody id="price-compare-body"></tbody>
+      </table></div>
+      <div class="empty" id="price-compare-empty" style="display:none">ما فيه أسعار مسجلة بعد، أو ما فيه نتائج مطابقة للفلتر</div>
+    </div>
+  </div>
+
 </div>
 
 <datalist id="flowerTypes"></datalist>
@@ -660,6 +668,15 @@
       </table></div>
       <div class="empty" id="alias-empty" style="display:none">ما فيه أسماء بديلة مسجلة بعد</div>
     </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>مين يشوف تبويب "الفواتير"</h2>
+      <p class="hint">إيميلات المسؤولين المصرّح لهم بتبويب "الفواتير" (الأسعار ومقارنة الموردين) — سطر لكل إيميل. باقي المستخدمين (مثل عبده) يستمرون يسجلون الدخول عادي ويدخلون الأسعار، بس ما يشوفون هذا التبويب. لو تركت الحقل فاضي، يظهر التبويب للجميع مؤقتاً.</p>
+      <form id="form-admins" style="grid-template-columns:1fr">
+        <div><label>الإيميلات (سطر لكل إيميل)</label><textarea id="admin-emails" rows="3" style="width:100%;font-family:'Cairo',sans-serif;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:7px" placeholder="algobiry2016@gmail.com&#10;saud@example.com"></textarea></div>
+        <div class="actions"><span></span><button type="submit" class="primary">حفظ القائمة</button></div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -691,7 +708,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
-let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{}, thresholds:{ghusn:20,rabta:2,habba:2} };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{}, thresholds:{ghusn:20,rabta:2,habba:2}, adminEmails:[] };
 
 const DEFAULT_TYPES = ['رز هولندي','رز اكوادوري','توليب','اوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
 const DEFAULT_COLORS = ['احمر','ابيض','وردي','اصفر','برتقالي','بنفسجي','مشكل'];
@@ -719,6 +736,13 @@ function tr(dict, val){ if(!val) return val; return dict[val] || val; }
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function monthStrNow(){ return new Date().toISOString().slice(0,7); }
+function setMonthlyQuick(monthsBack){
+  const d = new Date();
+  d.setMonth(d.getMonth() - monthsBack);
+  const monthStr = d.toISOString().slice(0,7);
+  document.getElementById('monthly-month').value = monthStr;
+  renderMonthlyReport();
+}
 
 function showToast(msg, isError){
   const t = document.getElementById('toast');
@@ -784,6 +808,26 @@ function attachListeners(){
     data.aliases = doc.exists ? (doc.data()||{}) : {};
     renderAliases();
   }, err=>{});
+  db.collection('meta').doc('admins').onSnapshot(doc=>{
+    data.adminEmails = doc.exists ? (doc.data().emails||[]) : [];
+    const ta = document.getElementById('admin-emails');
+    if(ta && document.activeElement !== ta) ta.value = data.adminEmails.join('\n');
+    updateInvoicesTabVisibility();
+  }, err=>{});
+}
+
+function isAdmin(){
+  if(!data.adminEmails.length) return true; // not configured yet — open to everyone, safer than locking owner out
+  const email = (auth.currentUser && auth.currentUser.email || '').toLowerCase();
+  return data.adminEmails.map(e=>e.trim().toLowerCase()).includes(email);
+}
+function updateInvoicesTabVisibility(){
+  const btn = document.getElementById('invoices-tab-btn');
+  const admin = isAdmin();
+  btn.style.display = admin ? 'inline-block' : 'none';
+  if(!admin && document.getElementById('panel-invoices').classList.contains('active')){
+    document.querySelector('.tab[data-tab="inflow"]').click();
+  }
 }
 
 function refreshCatalogLists(){
@@ -1492,8 +1536,11 @@ function renderMonthlyReport(){
 }
 
 function downloadSheet(aoa, filename, rtl){
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!views'] = [{RTL: !!rtl}];
+  // Physically reverse column order for Arabic so the first logical column
+  // (e.g. التاريخ) lands in the rightmost cell even in viewers that ignore
+  // the sheet-view RTL flag — more reliable across Excel/Sheets/WPS/LibreOffice.
+  const finalAoa = rtl ? aoa.map(row => Array.isArray(row) ? [...row].reverse() : row) : aoa;
+  const ws = XLSX.utils.aoa_to_sheet(finalAoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, filename);
@@ -1994,6 +2041,21 @@ document.getElementById('form-alias').addEventListener('submit', async (e) => {
   btn.disabled = false; btn.textContent = 'إضافة';
 });
 
+document.getElementById('form-admins').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const emails = document.getElementById('admin-emails').value
+    .split('\n').map(s=>s.trim()).filter(Boolean);
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    await withRetry(()=> db.collection('meta').doc('admins').set({emails}, {merge:false}));
+    showToast('تم حفظ قائمة المسؤولين');
+  }catch(err){
+    showToast('تعذر الحفظ، حاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ القائمة';
+});
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
@@ -2017,6 +2079,7 @@ auth.onAuthStateChanged(user => {
     document.getElementById('app-content').style.display = 'block';
     document.getElementById('user-email').textContent = user.email;
     attachListeners();
+    updateInvoicesTabVisibility();
   }else{
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('app-content').style.display = 'none';
