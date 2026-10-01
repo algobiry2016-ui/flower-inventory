@@ -122,6 +122,8 @@
   .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);}
   .edit-link{background:none;border:none;cursor:pointer;color:var(--leaf);font-size:12.5px;font-weight:600;font-family:'Cairo',sans-serif;padding:4px 8px;border-radius:5px;}
   .edit-link:hover{background:#EEF3EE;}
+  .click-row{cursor:pointer;}
+  .click-row:hover{background:#EEF3EE !important;}
   .stock-alert{background:var(--danger-bg);border:1px solid #E3B8B3;border-radius:10px;padding:14px 18px;margin:0 0 18px;display:none;}
   .stock-alert.show{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;}
   .stock-alert .msg{font-size:13.5px;color:#7a2a20;flex:1;min-width:220px;line-height:1.7;}
@@ -259,6 +261,16 @@
         <tbody id="inflow-body"></tbody>
       </table></div>
       <div class="empty" id="inflow-empty" style="display:none">لا يوجد سجلات دخول بعد</div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head"><h3>سجل الفواتير</h3><span class="count" id="invoice-log-count"></span></div>
+      <p class="hint" style="padding:0 18px 10px">كل فاتورة كسطر واحد (مجموع كل أصنافها) — "تعديل" يفتح لك بحث الفاتورة بالأعلى لتعديل الحقول المشتركة دفعة وحدة، و"حذف الفاتورة كاملة" يمسح كل أصنافها مرة وحدة.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>عدد الأصناف</th><th>إجمالي الكمية</th><th>إجمالي القيمة</th><th></th></tr></thead>
+        <tbody id="invoice-log-body"></tbody>
+      </table></div>
+      <div class="empty" id="invoice-log-empty" style="display:none">ما فيه فواتير مسجلة بعد</div>
     </div>
   </div>
 
@@ -418,6 +430,21 @@
       <ul class="rank-list" id="top-damaged-cost"></ul>
     </div>
 
+    <div class="table-card">
+      <div class="table-head"><h3>مقارنة أسعار الموردين لنفس الصنف</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="price-compare-search" placeholder="فلتر بالصنف (اختياري)" style="width:180px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="price-compare-count"></span>
+        </div>
+      </div>
+      <p class="hint" style="padding:0 18px 10px">مرتبة حسب الصنف واللون عشان تقارن بسهولة بين الموردين والدفعات المختلفة لنفس الصنف. بس الأسطر اللي فيها سعر مسجّل تظهر هنا.</p>
+      <div class="table-scroll"><table>
+        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>المورد</th><th>التاريخ</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>السعر قبل الضريبة</th><th>السعر النهائي (شامل الضريبة والشحن)</th></tr></thead>
+        <tbody id="price-compare-body"></tbody>
+      </table></div>
+      <div class="empty" id="price-compare-empty" style="display:none">ما فيه أسعار مسجلة بعد، أو ما فيه نتائج مطابقة للفلتر</div>
+    </div>
+
     <div class="card">
       <h2>تقرير حسب فترة مخصصة</h2>
       <p class="hint">اختر أي فترة من تاريخ إلى تاريخ (مو بالضرورة شهر كامل) — مفيد لفترة موسم معيّن أو مطابقة فاتورة محاسب.</p>
@@ -515,7 +542,16 @@
           <tbody id="daily-dest-body"></tbody>
         </table></div>
         <div class="empty" id="daily-dest-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
+        <div class="hint" style="padding:0 18px 12px">اضغط أي وجهة لعرض تفاصيلها الكاملة</div>
       </div>
+    </div>
+
+    <div class="table-card" id="daily-dest-detail-card" style="display:none">
+      <div class="table-head"><h3 id="daily-dest-detail-title">تفاصيل استهلاك الوجهة</h3></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th></tr></thead>
+        <tbody id="daily-dest-detail-body"></tbody>
+      </table></div>
     </div>
 
     <div class="table-card">
@@ -543,7 +579,16 @@
           <tbody id="monthly-dest-body"></tbody>
         </table></div>
         <div class="empty" id="monthly-dest-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
+        <div class="hint" style="padding:0 18px 12px">اضغط أي وجهة لعرض تفاصيلها الكاملة</div>
       </div>
+    </div>
+
+    <div class="table-card" id="monthly-dest-detail-card" style="display:none">
+      <div class="table-head"><h3 id="monthly-dest-detail-title">تفاصيل استهلاك الوجهة</h3></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th></tr></thead>
+        <tbody id="monthly-dest-detail-body"></tbody>
+      </table></div>
     </div>
 
     <div class="table-card">
@@ -1241,24 +1286,45 @@ function getOutflowByDestination(records){
   });
   return Object.values(map).sort((a,b)=> b.qty-a.qty);
 }
-function renderBreakdownTable(idPrefix, rows, labelKey){
+function renderBreakdownTable(idPrefix, rows, labelKey, clickScope){
   const body = document.getElementById(`${idPrefix}-body`);
   const empty = document.getElementById(`${idPrefix}-empty`);
   const count = document.getElementById(`${idPrefix}-count`);
   count.textContent = rows.length ? `${rows.length} صنف` : '';
   if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  body.innerHTML = rows.map(r=>`<tr><td>${esc(r[labelKey])}</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`).join('');
+  body.innerHTML = rows.map(r=>{
+    if(clickScope){
+      return `<tr class="click-row" onclick="toggleDestDetail('${clickScope}','${esc(r[labelKey])}')"><td>${esc(r[labelKey])} 🔎</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`;
+    }
+    return `<tr><td>${esc(r[labelKey])}</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`;
+  }).join('');
 }
+let dayOutflowCache = [];
+let monthOutflowCache = [];
 function renderDayColorDest(dateStr){
-  const dayOutflow = data.outflow.filter(r=>r.date===dateStr);
-  renderBreakdownTable('daily-color', getOutflowByColor(dayOutflow), 'color');
-  renderBreakdownTable('daily-dest', getOutflowByDestination(dayOutflow), 'destination');
+  dayOutflowCache = data.outflow.filter(r=>r.date===dateStr);
+  renderBreakdownTable('daily-color', getOutflowByColor(dayOutflowCache), 'color');
+  renderBreakdownTable('daily-dest', getOutflowByDestination(dayOutflowCache), 'destination', 'daily');
+  document.getElementById('daily-dest-detail-card').style.display = 'none';
 }
 function renderMonthColorDest(monthStr){
-  const monthOutflow = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
-  renderBreakdownTable('monthly-color', getOutflowByColor(monthOutflow), 'color');
-  renderBreakdownTable('monthly-dest', getOutflowByDestination(monthOutflow), 'destination');
+  monthOutflowCache = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
+  renderBreakdownTable('monthly-color', getOutflowByColor(monthOutflowCache), 'color');
+  renderBreakdownTable('monthly-dest', getOutflowByDestination(monthOutflowCache), 'destination', 'monthly');
+  document.getElementById('monthly-dest-detail-card').style.display = 'none';
+}
+function toggleDestDetail(scope, destination){
+  const records = (scope==='daily' ? dayOutflowCache : monthOutflowCache).filter(r=> (r.destination||'غير محدد') === destination);
+  const card = document.getElementById(`${scope}-dest-detail-card`);
+  const title = document.getElementById(`${scope}-dest-detail-title`);
+  const body = document.getElementById(`${scope}-dest-detail-body`);
+  title.textContent = `تفاصيل استهلاك: ${destination}`;
+  body.innerHTML = records.length ? records.map(r=>`<tr>
+    <td>${fmtDate(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
+    <td>${esc(r.condition)}</td><td class="notes">${esc(r.notes||'—')}</td><td>${userTag(r)}</td>
+  </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:16px">ما فيه سجلات</td></tr>';
+  card.style.display = 'block';
 }
 
 function renderDailyReport(){
@@ -1766,10 +1832,85 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
   btn.disabled = false; btn.textContent = 'حفظ التعديل';
 });
 
+let priceCompareSearchTerm = '';
+function renderPriceComparison(){
+  const body = document.getElementById('price-compare-body');
+  const empty = document.getElementById('price-compare-empty');
+  const count = document.getElementById('price-compare-count');
+  let rows = data.inflow.filter(r=> Number(r.unitPrice)>0);
+  if(priceCompareSearchTerm) rows = rows.filter(r=> matchesItemSearch(r, priceCompareSearchTerm));
+  rows = rows.slice().sort((a,b)=>
+    a.type.localeCompare(b.type,'ar') || (a.color||'').localeCompare(b.color||'','ar') || (a.date||'').localeCompare(b.date||'')
+  );
+  count.textContent = rows.length ? `${rows.length} سطر` : '';
+  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = rows.map(r=>`<tr>
+    <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${esc(r.unit||'غصن')}</td>
+    <td>${esc(r.supplier)}</td><td>${fmtDate(r.date)}</td><td>${esc(r.invoiceNo||'—')}</td><td>${esc(r.origin||'السعودية')}</td>
+    <td>${Number(r.unitPrice).toFixed(2)} ر.س</td><td><strong>${landedCost(r).toFixed(2)} ر.س</strong></td>
+  </tr>`).join('');
+}
+
+function getInvoiceGroups(){
+  const map = {};
+  data.inflow.forEach(r=>{
+    const key = (r.invoiceNo||'بدون رقم')+'|'+r.date+'|'+r.supplier;
+    if(!map[key]) map[key] = { key, invoiceNo:r.invoiceNo||'', date:r.date, supplier:r.supplier, origin:r.origin||'السعودية', items:[], totalQty:0, totalValue:0 };
+    map[key].items.push(r);
+    map[key].totalQty += Number(r.qty)||0;
+    map[key].totalValue += landedCost(r)*(Number(r.qty)||0);
+  });
+  return Object.values(map).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+}
+function renderInvoiceGroups(){
+  const body = document.getElementById('invoice-log-body');
+  const empty = document.getElementById('invoice-log-empty');
+  const count = document.getElementById('invoice-log-count');
+  const groups = getInvoiceGroups();
+  count.textContent = groups.length ? `${groups.length} فاتورة` : '';
+  if(!groups.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = groups.map(g=>`<tr>
+    <td>${fmtDate(g.date)}</td><td>${esc(g.supplier)}</td><td>${esc(g.invoiceNo||'—')}</td><td>${esc(g.origin)}</td>
+    <td>${g.items.length}</td><td>${g.totalQty}</td><td><strong>${g.totalValue.toFixed(0)} ر.س</strong></td>
+    <td>
+      <button class="edit-link" onclick="editInvoiceGroup('${esc(g.invoiceNo)}')">تعديل</button>
+      <button class="del" onclick="deleteInvoiceGroup('${esc(g.key)}')">حذف الفاتورة كاملة</button>
+    </td>
+  </tr>`).join('');
+}
+function editInvoiceGroup(invoiceNo){
+  if(!invoiceNo){ showToast('هذي الفاتورة بدون رقم، عدّل كل صنف لحاله من زر "تعديل" بسجل الدخول', true); return; }
+  document.getElementById('inflow-search').value = invoiceNo;
+  inflowSearchTerm = invoiceNo.toLowerCase();
+  renderTable('inflow');
+  document.querySelector('.tab[data-tab="inflow"]').click();
+  document.getElementById('bulk-edit-bar').scrollIntoView({behavior:'smooth', block:'center'});
+}
+async function deleteInvoiceGroup(key){
+  const groups = getInvoiceGroups();
+  const group = groups.find(g=>g.key===key);
+  if(!group) return;
+  const ok = confirm(`بتحذف الفاتورة كاملة (${group.items.length} صنف) من المورد "${group.supplier}" بتاريخ ${group.date} — هذا الإجراء ما يترجع. متأكد؟`);
+  if(!ok) return;
+  try{
+    await withRetry(async ()=>{
+      const batch = db.batch();
+      group.items.forEach(r=> batch.delete(db.collection(KEYS.inflow).doc(r.id)));
+      await batch.commit();
+    });
+    showToast(`تم حذف الفاتورة كاملة (${group.items.length} صنف)`);
+  }catch(err){
+    showToast('تعذر الحذف، تأكد من الاتصال وحاول مرة ثانية', true);
+  }
+}
+
 function renderAll(){
   renderTable('inflow'); renderTable('outflow'); renderTable('damaged');
   renderShortage(); renderOpening(); renderBalance(); renderTopLists();
   renderDailyPurchases(); renderDailyReport(); renderMonthlyReport();
+  renderPriceComparison(); renderInvoiceGroups();
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1816,6 +1957,10 @@ document.getElementById('damaged-search').addEventListener('input', (e) => {
 document.getElementById('balance-search').addEventListener('input', (e) => {
   balanceSearchTerm = e.target.value.trim();
   renderBalance();
+});
+document.getElementById('price-compare-search').addEventListener('input', (e) => {
+  priceCompareSearchTerm = e.target.value.trim();
+  renderPriceComparison();
 });
 
 document.getElementById('form-wa-settings').addEventListener('submit', async (e) => {
