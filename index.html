@@ -124,6 +124,12 @@
   .edit-link:hover{background:#EEF3EE;}
   .click-row{cursor:pointer;}
   .click-row:hover{background:#EEF3EE !important;}
+  .period-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 18px;background:#FAFAF7;border-bottom:1px solid var(--line);}
+  .period-bar label{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+  .period-bar input{width:auto;padding:5px 8px;font-size:12.5px;}
+  .period-bar .pb-label{font-weight:700;font-size:13px;color:var(--leaf);flex:1 1 100%;}
+  .period-bar button.sm{padding:5px 12px;font-size:12px;}
+  .period-bar .exp{display:flex;gap:6px;margin-inline-start:auto;}
   .stock-alert{background:var(--danger-bg);border:1px solid #E3B8B3;border-radius:10px;padding:14px 18px;margin:0 0 18px;display:none;}
   .stock-alert.show{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;}
   .stock-alert .msg{font-size:13.5px;color:#7a2a20;flex:1;min-width:220px;line-height:1.7;}
@@ -246,6 +252,7 @@
           <span class="count" id="inflow-count"></span>
         </div>
       </div>
+      <div id="period-bar-inflow"></div>
       <div class="stock-alert" id="bulk-edit-bar" style="background:var(--blue-bg);border-color:#BFD9E6;margin:0;border-radius:0;flex-direction:column;align-items:stretch;">
         <div class="msg" id="bulk-edit-msg" style="color:#25506b"></div>
         <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:8px">
@@ -297,6 +304,7 @@
           <span class="count" id="outflow-count"></span>
         </div>
       </div>
+      <div id="period-bar-outflow"></div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الوجهة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="outflow-body"></tbody>
@@ -334,6 +342,8 @@
           <span class="count" id="damaged-count"></span>
         </div>
       </div>
+      <div id="period-bar-damaged"></div>
+      <div id="damaged-reasons-wrap"></div>
       <div class="table-scroll"><table>
         <thead><tr><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>المصدر</th><th>سبب التلف</th><th>أضافه</th><th></th></tr></thead>
         <tbody id="damaged-body"></tbody>
@@ -756,12 +766,15 @@ const T = {
 };
 function tr(dict, val){ if(!val) return val; return dict[val] || val; }
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
-function monthStrNow(){ return new Date().toISOString().slice(0,7); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function localDateStr(d){ d = d || new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function todayStr(){ return localDateStr(); }
+function monthStrNow(){ return localDateStr().slice(0,7); }
 function setMonthlyQuick(monthsBack){
   const d = new Date();
+  d.setDate(1); // avoid month overflow (e.g. 31 Oct minus 1 month landing on 1 Oct)
   d.setMonth(d.getMonth() - monthsBack);
-  const monthStr = d.toISOString().slice(0,7);
+  const monthStr = localDateStr(d).slice(0,7);
   document.getElementById('monthly-month').value = monthStr;
   renderMonthlyReport();
 }
@@ -988,21 +1001,102 @@ function matchesItemSearch(r, term){
   const hay = normalizeAr((r.type||'')+' '+(r.color||''));
   return hay.includes(normalizeAr(term));
 }
+// ---- Period (month / custom range) view for the operational logs ----
+const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function monthLabelAr(m){
+  const [y, mo] = m.split('-');
+  return `${MONTH_NAMES_AR[Number(mo)-1] || mo} ${y}`;
+}
+const periodState = {
+  inflow:  { month:null, from:'', to:'' },
+  outflow: { month:null, from:'', to:'' },
+  damaged: { month:null, from:'', to:'' }
+};
+function getPeriod(kind){
+  const s = periodState[kind];
+  if(s.from || s.to){
+    const from = s.from || '0000-01-01';
+    const to = s.to || '9999-12-31';
+    const label = (s.from && s.to) ? `من ${fmtDate(s.from)} إلى ${fmtDate(s.to)}`
+                : s.from ? `من ${fmtDate(s.from)} حتى الآن`
+                : `حتى ${fmtDate(s.to)}`;
+    return { test: d => !!d && d >= from && d <= to, label, key: `${s.from||'start'}_to_${s.to||'end'}` };
+  }
+  const m = s.month || monthStrNow(); // null month = always the current month (rolls over by itself)
+  return { test: d => (d||'').slice(0,7) === m, label: monthLabelAr(m) + (s.month ? '' : ' (الشهر الحالي)'), key: m };
+}
+function searchTermFor(kind){
+  return kind==='inflow' ? inflowSearchTerm : kind==='outflow' ? outflowSearchTerm : damagedSearchTerm;
+}
+// Default view = selected period (current month unless changed). A search term overrides the
+// period and looks through ALL records, so an invoice can always be found (e.g. to fix its date).
+function getVisibleRows(kind){
+  const term = searchTermFor(kind);
+  const all = data[kind];
+  if(term){
+    const rows = kind==='inflow'
+      ? all.filter(r => (r.invoiceNo||'').toLowerCase().includes(term) || matchesItemSearch(r, term))
+      : all.filter(r => matchesItemSearch(r, term));
+    return { rows, searching:true, period:null };
+  }
+  const period = getPeriod(kind);
+  return { rows: all.filter(r => period.test(r.date)), searching:false, period };
+}
+function syncPeriodBar(kind, info){
+  const lbl = document.getElementById(`pb-label-${kind}`);
+  if(!lbl) return;
+  lbl.textContent = info.searching ? 'نتائج البحث (من كل الفترات)' : `المعروض: ${info.period.label}`;
+  const s = periodState[kind];
+  const mi = document.getElementById(`pb-month-${kind}`);
+  const want = (s.from || s.to) ? '' : (s.month || monthStrNow());
+  if(mi && mi.value !== want && document.activeElement !== mi) mi.value = want;
+}
+function initPeriodBars(){
+  ['inflow','outflow','damaged'].forEach(kind=>{
+    const host = document.getElementById(`period-bar-${kind}`);
+    if(!host) return;
+    host.innerHTML = `
+      <div class="period-bar">
+        <span class="pb-label" id="pb-label-${kind}"></span>
+        <label>الشهر <input type="month" id="pb-month-${kind}"></label>
+        <label>من <input type="date" id="pb-from-${kind}"></label>
+        <label>إلى <input type="date" id="pb-to-${kind}"></label>
+        <button type="button" class="ghost sm" id="pb-reset-${kind}">الشهر الحالي</button>
+        <span class="exp">
+          <button type="button" class="ghost sm" onclick="exportLog('${kind}','ar')">Excel (عربي)</button>
+          <button type="button" class="ghost sm" onclick="exportLog('${kind}','en')">Excel (EN)</button>
+        </span>
+      </div>`;
+    const s = periodState[kind];
+    const mi = document.getElementById(`pb-month-${kind}`);
+    const fi = document.getElementById(`pb-from-${kind}`);
+    const ti = document.getElementById(`pb-to-${kind}`);
+    mi.addEventListener('change', ()=>{
+      s.month = mi.value || null; s.from = ''; s.to = ''; fi.value = ''; ti.value = '';
+      renderTable(kind);
+    });
+    const onRange = ()=>{
+      if(fi.value && ti.value && fi.value > ti.value){ showToast('"من" لازم يكون قبل "إلى"', true); return; }
+      s.from = fi.value; s.to = ti.value;
+      renderTable(kind);
+    };
+    fi.addEventListener('change', onRange);
+    ti.addEventListener('change', onRange);
+    document.getElementById(`pb-reset-${kind}`).addEventListener('click', ()=>{
+      s.month = null; s.from = ''; s.to = ''; fi.value = ''; ti.value = '';
+      renderTable(kind);
+    });
+  });
+}
+
+const EMPTY_TEXT = { inflow:'لا يوجد سجلات دخول بعد', outflow:'لا يوجد سجلات خروج بعد', damaged:'لا يوجد سجلات تالف بعد' };
 function renderTable(kind){
   const body = document.getElementById(`${kind}-body`);
   const empty = document.getElementById(`${kind}-empty`);
   const count = document.getElementById(`${kind}-count`);
-  let arr = data[kind];
-  if(kind==='inflow' && inflowSearchTerm){
-    const t = inflowSearchTerm;
-    arr = arr.filter(r => (r.invoiceNo||'').toLowerCase().includes(t) || matchesItemSearch(r, t));
-  }
-  if(kind==='outflow' && outflowSearchTerm){
-    arr = arr.filter(r => matchesItemSearch(r, outflowSearchTerm));
-  }
-  if(kind==='damaged' && damagedSearchTerm){
-    arr = arr.filter(r => matchesItemSearch(r, damagedSearchTerm));
-  }
+  const info = getVisibleRows(kind);
+  const arr = info.rows;
+  syncPeriodBar(kind, info);
   if(kind==='inflow'){
     lastInflowSearchResults = arr;
     const bar = document.getElementById('bulk-edit-bar');
@@ -1014,9 +1108,53 @@ function renderTable(kind){
       bar.classList.remove('show');
     }
   }
-  count.textContent = arr.length ? `${arr.length} سجل` : ((kind==='inflow'&&inflowSearchTerm)||(kind==='outflow'&&outflowSearchTerm)||(kind==='damaged'&&damagedSearchTerm) ? 'ما فيه نتائج' : '');
-  if(!arr.length){ body.innerHTML=''; empty.style.display='block'; }
-  else{ empty.style.display='none'; body.innerHTML = rowsHtml(kind, arr); }
+  count.textContent = arr.length ? `${arr.length} سجل` : '';
+  if(!arr.length){
+    body.innerHTML = '';
+    empty.textContent = info.searching ? 'ما فيه نتائج مطابقة للبحث'
+      : (data[kind].length ? 'ما فيه سجلات بهذي الفترة — غيّر الشهر أو الفترة من الأعلى' : EMPTY_TEXT[kind]);
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    body.innerHTML = rowsHtml(kind, arr);
+  }
+  if(kind==='damaged') renderDamageReasons(arr);
+}
+
+// ---- Damage reasons summary (for the rows currently shown) ----
+function groupDamageReasons(rows, withCost){
+  const avgMap = withCost ? getAvgCostMap() : null;
+  const map = {};
+  const unitTotals = {};
+  rows.forEach(r=>{
+    const reason = (r.reason||'').trim() || 'غير محدد';
+    const unit = r.unit || 'غصن';
+    const q = Number(r.qty)||0;
+    const key = normalizeAr(reason) + '|' + unit;
+    if(!map[key]) map[key] = { reason, unit, qty:0, count:0, after:0, cost:0 };
+    const g = map[key];
+    g.qty += q; g.count += 1;
+    if(r.damageSource === 'after') g.after += q;
+    if(withCost) g.cost += (avgMap[groupKey3(r.type, r.color, r.unit)] || 0) * q;
+    unitTotals[unit] = (unitTotals[unit]||0) + q;
+  });
+  const list = Object.values(map).sort((a,b)=> b.qty - a.qty);
+  list.forEach(g => { g.pct = unitTotals[g.unit] ? (g.qty / unitTotals[g.unit]) * 100 : 0; });
+  return list;
+}
+function renderDamageReasons(rows){
+  const wrap = document.getElementById('damaged-reasons-wrap');
+  if(!wrap) return;
+  if(!rows.length){ wrap.innerHTML = ''; return; }
+  const admin = isAdmin();
+  const list = groupDamageReasons(rows, admin);
+  wrap.innerHTML = `
+    <div style="padding:12px 18px 6px;font-weight:700;font-size:13.5px">أسباب التلف بالفترة المعروضة</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>السبب</th><th>الوحدة</th><th>الكمية</th><th>النسبة</th><th>عدد السجلات</th><th>منها بعد الخروج</th>${admin ? '<th>التكلفة التقديرية</th>' : ''}</tr></thead>
+      <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(0)+' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
+    </table></div>
+    <div style="border-bottom:1px solid var(--line)"></div>`;
 }
 async function bulkUpdateInvoice(){
   const newDate = document.getElementById('bulk-edit-date').value;
@@ -1571,19 +1709,126 @@ function renderMonthlyReport(){
   body.innerHTML = rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('');
 }
 
-function downloadSheet(aoa, filename, rtl){
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+function colWidths(aoa){
+  const widths = [];
+  aoa.forEach(row => {
+    if(!Array.isArray(row) || row.length < 2) return; // ignore single-cell summary lines
+    row.forEach((v, i) => {
+      const len = String(v ?? '').length;
+      widths[i] = Math.max(widths[i] || 8, Math.min(len + 2, 45));
+    });
+  });
+  return widths.map(w => ({ wch: w }));
+}
+function downloadWorkbook(sheets, filename, rtl){
   const wb = XLSX.utils.book_new();
-  if(rtl){
-    // Set RTL at both the worksheet view AND the workbook level — Excel
-    // reads either depending on version, so setting both is the reliable combo.
-    // With RTL on and NORMAL (non-reversed) column order, column A (first
-    // logical column, e.g. التاريخ) renders at the right edge, as expected.
-    ws['!views'] = [{ RTL: true }];
-    wb.Workbook = { Views: [{ RTL: true }] };
-  }
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  // RTL at both workbook and sheet level (Excel reads either, depending on version);
+  // column order stays natural so the first column lands on the right edge.
+  if(rtl) wb.Workbook = { Views: [{ RTL: true }] };
+  sheets.forEach(s => {
+    const ws = XLSX.utils.aoa_to_sheet(s.aoa);
+    ws['!cols'] = colWidths(s.aoa);
+    if(rtl) ws['!views'] = [{ RTL: true }];
+    XLSX.utils.book_append_sheet(wb, ws, String(s.name).slice(0,31));
+  });
   XLSX.writeFile(wb, filename);
+}
+function downloadSheet(aoa, filename, rtl){
+  downloadWorkbook([{ name:'Sheet1', aoa }], filename, rtl);
+}
+
+// ---- Excel export of the inflow / outflow / damaged logs (exactly what is on screen) ----
+const ORIGIN_EN = { 'السعودية':'Saudi Arabia','هولندا':'Netherlands','كينيا':'Kenya','إثيوبيا':'Ethiopia','الإكوادور':'Ecuador' };
+const DEST_EN = { 'المتجر (الموقع)':'Online store','واتساب':'WhatsApp','المحل':'Shop','أخرى':'Other' };
+const SHORTAGE_EN = { 'قيد المتابعة مع المورد':'Following up with supplier','تم التعويض من المورد':'Compensated by supplier','تم الخصم من الفاتورة':'Deducted from invoice' };
+const SOURCE_LABEL = { before:['قبل الخروج','Before exit (main fridge)'], after:['بعد الخروج','After exit (small fridge)'] };
+function round2(n){ return Math.round((Number(n)||0) * 100) / 100; }
+function userName(r){ return r.addedBy ? r.addedBy.split('@')[0] : ''; }
+
+function logExportSpec(kind, lang){
+  const en = lang === 'en';
+  const date = r => en ? (r.date || '') : fmtDate(r.date);
+  const type = r => en ? tr(T.type, r.type) : (r.type || '');
+  const color = r => (r.color || '').split(/[,،]/).map(s=>s.trim()).filter(Boolean).map(c => en ? tr(T.color, c) : c).join(en ? ', ' : '، ');
+  const unit = r => en ? tr(T.unit, r.unit || 'غصن') : (r.unit || 'غصن');
+  const cond = r => en ? tr(T.condition, r.condition) : (r.condition || '');
+  const qty = r => Number(r.qty) || 0;
+  const cols = [];
+  const add = (ar, enLbl, fn) => cols.push({ label: en ? enLbl : ar, fn });
+  if(kind === 'inflow'){
+    add('التاريخ','Date', date);
+    add('المورد','Supplier', r => r.supplier || '');
+    add('رقم الفاتورة','Invoice No', r => r.invoiceNo || '');
+    add('بلد المنشأ','Origin', r => { const o = r.origin || 'السعودية'; return en ? (ORIGIN_EN[o] || o) : o; });
+    add('نوع الورد','Flower Type', type);
+    add('اللون','Color', color);
+    add('الكمية المستلمة','Received Qty', qty);
+    add('الوحدة','Unit', unit);
+    add('الكمية حسب الفاتورة','Invoice Qty', r => Number(r.invoiceQty) || '');
+    add('النقص عن الفاتورة','Shortfall', r => Number(r.invoiceQty) > qty(r) ? Number(r.invoiceQty) - qty(r) : '');
+    add('حالة النقص','Shortfall Status', r => Number(r.invoiceQty) > qty(r) ? (en ? (SHORTAGE_EN[r.shortageStatus] || r.shortageStatus || '') : (r.shortageStatus || '')) : '');
+    if(isAdmin()){ // price columns are exported for admins only
+      add('السعر المدخل (ريال)','Entered Price (SAR)', r => Number(r.unitPrice) ? round2(r.unitPrice) : '');
+      add('طريقة التسعير','Pricing Mode', r => !Number(r.unitPrice) ? '' :
+        (r.vatMode === 'incl' ? (en ? 'VAT included' : 'شامل الضريبة')
+         : r.vatMode === 'none' ? (en ? 'Imported (no VAT)' : 'مستورد بدون ضريبة')
+         : (en ? 'Excl. VAT (+15%)' : 'قبل الضريبة (+15%)')));
+      add('شحن وجمارك للوحدة (ريال)','Freight & Customs per Unit (SAR)', r => Number(r.freightPerUnit) ? round2(r.freightPerUnit) : '');
+      add('التكلفة النهائية للوحدة (ريال)','Final Unit Cost (SAR)', r => landedCost(r) ? round2(landedCost(r)) : '');
+      add('الإجمالي (ريال)','Total (SAR)', r => landedCost(r) ? round2(landedCost(r) * qty(r)) : '');
+    }
+    add('حالة الورد','Condition', cond);
+    add('ملاحظات','Notes', r => r.notes || '');
+    add('أضافه','Added By', userName);
+  } else if(kind === 'outflow'){
+    add('التاريخ','Date', date);
+    add('نوع الورد','Flower Type', type);
+    add('اللون','Color', color);
+    add('الكمية','Quantity', qty);
+    add('الوحدة','Unit', unit);
+    add('الوجهة','Destination', r => en ? (DEST_EN[r.destination] || r.destination || '') : (r.destination || ''));
+    add('حالة الورد','Condition', cond);
+    add('ملاحظات','Notes', r => r.notes || '');
+    add('أضافه','Added By', userName);
+  } else {
+    add('التاريخ','Date', date);
+    add('المورد','Supplier', r => r.supplier || '');
+    add('نوع الورد','Flower Type', type);
+    add('اللون','Color', color);
+    add('الكمية','Quantity', qty);
+    add('الوحدة','Unit', unit);
+    add('مصدر التلف','Damage Source', r => SOURCE_LABEL[r.damageSource === 'after' ? 'after' : 'before'][en ? 1 : 0]);
+    add('سبب التلف','Damage Reason', r => en ? tr(T.reason, r.reason) : (r.reason || ''));
+    add('أضافه','Added By', userName);
+  }
+  return cols;
+}
+function exportLog(kind, lang){
+  const info = getVisibleRows(kind);
+  if(!info.rows.length){ showToast('ما فيه سجلات للتصدير بهذي الفترة', true); return; }
+  const en = lang === 'en';
+  const cols = logExportSpec(kind, lang);
+  const rows = [...info.rows].sort((a,b) => (a.date||'').localeCompare(b.date||'')); // oldest first for analysis
+  const aoa = [cols.map(c => c.label), ...rows.map(r => cols.map(c => c.fn(r)))];
+  const names = { inflow:['سجل الدخول','Inflow'], outflow:['سجل الخروج','Outflow'], damaged:['سجل التالف','Damaged'] };
+  const sheets = [{ name: names[kind][en ? 1 : 0], aoa }];
+  if(kind === 'damaged'){
+    const admin = isAdmin();
+    const list = groupDamageReasons(rows, admin);
+    const head = en
+      ? ['Reason','Unit','Quantity','Share of unit total (%)','Records','Of which after exit']
+      : ['السبب','الوحدة','الكمية','النسبة من تالف الوحدة (%)','عدد السجلات','منها بعد الخروج'];
+    if(admin) head.push(en ? 'Estimated Cost (SAR)' : 'التكلفة التقديرية (ريال)');
+    const body = list.map(g => {
+      const row = [en ? tr(T.reason, g.reason) : g.reason, en ? tr(T.unit, g.unit) : g.unit, g.qty, Math.round(g.pct * 10) / 10, g.count, g.after];
+      if(admin) row.push(round2(g.cost));
+      return row;
+    });
+    sheets.push({ name: en ? 'Reasons' : 'أسباب التلف', aoa: [head, ...body] });
+  }
+  const tag = info.searching ? 'search' : info.period.key;
+  downloadWorkbook(sheets, `${kind}-${tag}-${lang}.xlsx`, !en);
+  showToast('تم تصدير الملف');
 }
 function exportDaily(lang){
   const dateStr = document.getElementById('daily-date').value;
@@ -2019,6 +2264,7 @@ wireForm('outflow');
 wireForm('damaged');
 wireForm('opening');
 wireInvoiceFlow();
+initPeriodBars();
 
 document.getElementById('form-range-report').addEventListener('submit', (e) => {
   e.preventDefault();
