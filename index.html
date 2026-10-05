@@ -124,6 +124,19 @@
   .edit-link:hover{background:#EEF3EE;}
   .click-row{cursor:pointer;}
   .click-row:hover{background:#EEF3EE !important;}
+  button.ghost.sm{padding:5px 12px;font-size:12px;}
+  .rp-card .rp-title{font-size:16px;font-weight:800;color:var(--leaf);margin-bottom:12px;}
+  .rp-quick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .rp-quick button.active,.rp-pill.active{background:var(--leaf);color:#fff;border-color:var(--leaf);}
+  .rp-fields{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:12px;}
+  .rp-fields label{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+  .rp-fields input{width:auto;padding:6px 8px;font-size:13px;}
+  .rp-export{display:flex;flex-wrap:wrap;gap:8px;}
+  .rp-pills{display:flex;gap:6px;overflow-x:auto;margin:0 0 16px;padding-bottom:2px;}
+  .rp-pill{background:#fff;color:var(--ink-soft);border:1px solid var(--line);border-radius:20px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;padding:7px 16px;cursor:pointer;white-space:nowrap;}
+  .rp-sec{display:none;}
+  .rp-sec.active{display:block;}
+  .kpi .v.sm{font-size:15px;line-height:1.5;}
   .period-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 18px;background:#FAFAF7;border-bottom:1px solid var(--line);}
   .period-bar label{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;color:var(--ink-soft);font-weight:600;}
   .period-bar input{width:auto;padding:5px 8px;font-size:12.5px;}
@@ -412,205 +425,148 @@
   <!-- REPORTS -->
   <div class="panel" id="panel-reports">
 
-    <div class="subgrid">
-      <div class="card">
-        <h2>الأصناف الأكثر استهلاكاً</h2>
-        <p class="hint">أعلى 5 أصناف حسب إجمالي كمية الخروج (كل الفترات)</p>
-        <ul class="rank-list" id="top-consumed"></ul>
+    <div class="card rp-card">
+      <div class="rp-title" id="rp-title">التقرير</div>
+      <div class="rp-quick">
+        <button type="button" class="ghost sm" data-rq="today">اليوم</button>
+        <button type="button" class="ghost sm" data-rq="month">هذا الشهر</button>
+        <button type="button" class="ghost sm" data-rq="prev">الشهر السابق</button>
+        <button type="button" class="ghost sm" data-rq="all">كل الفترات</button>
       </div>
-      <div class="card">
-        <h2>الأصناف الأكثر تلفاً</h2>
-        <p class="hint">أعلى 5 أصناف حسب إجمالي كمية التالف (كل الفترات)</p>
-        <ul class="rank-list" id="top-damaged"></ul>
+      <div class="rp-fields">
+        <label>شهر آخر <input type="month" id="rp-month"></label>
+        <label>أو فترة: من <input type="date" id="rp-from"></label>
+        <label>إلى <input type="date" id="rp-to"></label>
+      </div>
+      <div class="rp-export">
+        <button type="button" class="ghost" onclick="exportReport('ar')">تصدير Excel (عربي)</button>
+        <button type="button" class="ghost" onclick="exportReport('en')">Export Excel (English)</button>
       </div>
     </div>
 
-    <div class="card">
-      <h2>الأصناف الأعلى تكلفة هالك</h2>
-      <p class="hint">أعلى 5 أصناف حسب القيمة التقديرية المفقودة بالريال (يحتاج تسجيل سعر الوحدة عند الدخول)</p>
-      <ul class="rank-list" id="top-damaged-cost"></ul>
+    <div class="rp-pills" id="rp-pills">
+      <button type="button" class="rp-pill active" data-rs="summary">الملخص</button>
+      <button type="button" class="rp-pill" data-rs="consumption">الاستهلاك</button>
+      <button type="button" class="rp-pill" data-rs="damage">التالف</button>
+      <button type="button" class="rp-pill" data-rs="purchases">المشتريات</button>
+      <button type="button" class="rp-pill" data-rs="moves">الحركات</button>
     </div>
 
-    <div class="card">
-      <h2>تقرير حسب فترة مخصصة</h2>
-      <p class="hint">اختر أي فترة من تاريخ إلى تاريخ (مو بالضرورة شهر كامل) — مفيد لفترة موسم معيّن أو مطابقة فاتورة محاسب.</p>
-      <form id="form-range-report" style="grid-template-columns:1fr 1fr auto">
-        <div><label>من تاريخ</label><input type="date" id="range-from" required></div>
-        <div><label>إلى تاريخ</label><input type="date" id="range-to" required></div>
-        <div class="actions" style="margin-top:20px"><span></span><button type="submit" class="primary">عرض التقرير</button></div>
-      </form>
-      <div class="actions" style="margin-top:10px;display:none" id="range-summary-row">
-        <span id="range-summary" class="hint" style="margin:0"></span>
-        <div class="exp">
-          <button class="ghost" onclick="exportRange('ar')">تصدير Excel (عربي)</button>
-          <button class="ghost" onclick="exportRange('en')">Export Excel (English)</button>
+    <!-- الملخص -->
+    <div class="rp-sec active" data-sec="summary">
+      <div class="kpis" id="rp-kpis">
+        <div class="kpi"><div class="v" id="rp-k-purchases">0 ر.س</div><div class="l">إجمالي المشتريات</div></div>
+        <div class="kpi"><div class="v" id="rp-k-in">0</div><div class="l">الوارد</div></div>
+        <div class="kpi"><div class="v" id="rp-k-out">0</div><div class="l">الصادر (الاستهلاك)</div></div>
+        <div class="kpi"><div class="v" id="rp-k-damaged">0</div><div class="l">التالف</div></div>
+        <div class="kpi"><div class="v" id="rp-k-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
+        <div class="kpi"><div class="v" id="rp-k-wastecost">0 ر.س</div><div class="l">تكلفة الهالك التقديرية</div></div>
+        <div class="kpi"><div class="v" id="rp-k-postexit">0%</div><div class="l">التلف بعد الخروج (من الصادر) — مؤشر الثلاجة الصغيرة</div></div>
+      </div>
+      <div class="subgrid">
+        <div class="card">
+          <h2>الأصناف الأكثر استهلاكاً</h2>
+          <ul class="rank-list" id="rp-top-consumed"></ul>
+        </div>
+        <div class="card">
+          <h2>الأصناف الأكثر تلفاً</h2>
+          <ul class="rank-list" id="rp-top-damaged"></ul>
         </div>
       </div>
-    </div>
-    <div class="kpis" id="range-kpis" style="display:none">
-      <div class="kpi"><div class="v" id="kpi-range-purchases">0 ر.س</div><div class="l">إجمالي المشتريات بالفترة</div></div>
-      <div class="kpi"><div class="v" id="kpi-range-in">0</div><div class="l">إجمالي الوارد</div></div>
-      <div class="kpi"><div class="v" id="kpi-range-out">0</div><div class="l">إجمالي الصادر</div></div>
-      <div class="kpi"><div class="v" id="kpi-range-damaged">0</div><div class="l">إجمالي التالف</div></div>
-      <div class="kpi"><div class="v" id="kpi-range-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
-    </div>
-    <div class="subgrid" id="range-ranklists" style="display:none">
-      <div class="card">
-        <h2>الأصناف الأكثر استهلاكاً بالفترة</h2>
-        <ul class="rank-list" id="range-top-consumed"></ul>
-      </div>
-      <div class="card">
-        <h2>الأصناف الأكثر تلفاً بالفترة</h2>
-        <ul class="rank-list" id="range-top-damaged"></ul>
+      <div class="table-card">
+        <div class="table-head"><h3>ملخص حركة الأصناف</h3><span class="count" id="rp-items-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>الوارد</th><th>تكلفة المشتريات</th><th>الصادر</th><th>التالف</th></tr></thead>
+          <tbody id="rp-items-body"></tbody>
+        </table></div>
+        <div class="empty" id="rp-items-empty" style="display:none">ما فيه حركات بهذي الفترة</div>
       </div>
     </div>
 
-    <div class="table-card" id="range-table-card" style="display:none">
-      <div class="table-head"><h3>تفاصيل الفترة المحددة حسب النوع واللون</h3><span class="count" id="range-count"></span></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>إجمالي الوارد</th><th>تكلفة المشتريات</th><th>إجمالي الصادر</th><th>إجمالي التالف</th></tr></thead>
-        <tbody id="range-body"></tbody>
-      </table></div>
-    </div>
-
-    <div class="subgrid">
-      <div class="card">
-        <h2>تقرير يومي</h2>
-        <p class="hint">يجمع كل حركات الدخول والخروج والتالف لتاريخ معيّن</p>
-        <form id="form-daily-report" style="grid-template-columns:1fr;">
-          <div><label>التاريخ</label><input type="date" name="date" id="daily-date" required></div>
-        </form>
-        <div class="actions" style="margin-top:10px">
-          <span id="daily-summary" class="hint" style="margin:0"></span>
-          <div class="exp">
-            <button class="ghost" onclick="exportDaily('ar')">تصدير Excel (عربي)</button>
-            <button class="ghost" onclick="exportDaily('en')">Export Excel (English)</button>
-          </div>
+    <!-- الاستهلاك -->
+    <div class="rp-sec" data-sec="consumption">
+      <div class="subgrid">
+        <div class="table-card">
+          <div class="table-head"><h3>الاستهلاك حسب الوجهة</h3><span class="count" id="rp-dest-count"></span></div>
+          <div class="table-scroll"><table>
+            <thead><tr><th>الوجهة</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+            <tbody id="rp-dest-body"></tbody>
+          </table></div>
+          <div class="empty" id="rp-dest-empty" style="display:none">ما فيه خروج بهذي الفترة</div>
+          <div class="hint" style="padding:0 18px 12px">اضغط أي وجهة لعرض تفاصيلها الكاملة</div>
+        </div>
+        <div class="table-card">
+          <div class="table-head"><h3>الاستهلاك حسب الصنف واللون</h3><span class="count" id="rp-color-count"></span></div>
+          <div class="table-scroll"><table>
+            <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
+            <tbody id="rp-color-body"></tbody>
+          </table></div>
+          <div class="empty" id="rp-color-empty" style="display:none">ما فيه خروج بهذي الفترة</div>
         </div>
       </div>
-      <div class="card">
-        <h2>تقرير شهري</h2>
-        <p class="hint">إجمالي الوارد والصادر والتالف لكل نوع/لون خلال الشهر، ونسبة الهالك</p>
-        <form id="form-monthly-report" style="grid-template-columns:1fr;">
-          <div><label>الشهر</label><input type="month" name="month" id="monthly-month" required></div>
-        </form>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="ghost" type="button" onclick="setMonthlyQuick(0)">هذا الشهر</button>
-          <button class="ghost" type="button" onclick="setMonthlyQuick(1)">الشهر السابق</button>
-        </div>
-        <div class="actions" style="margin-top:10px">
-          <span id="monthly-summary" class="hint" style="margin:0"></span>
-          <div class="exp">
-            <button class="ghost" onclick="exportMonthly('ar')">تصدير Excel (عربي)</button>
-            <button class="ghost" onclick="exportMonthly('en')">Export Excel (English)</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="kpis" id="monthly-kpis" style="display:none">
-      <div class="kpi"><div class="v" id="kpi-purchases">0 ر.س</div><div class="l">إجمالي مشتريات الورد هذا الشهر</div></div>
-      <div class="kpi"><div class="v" id="kpi-in">0</div><div class="l">إجمالي الوارد هذا الشهر</div></div>
-      <div class="kpi"><div class="v" id="kpi-out">0</div><div class="l">إجمالي الصادر هذا الشهر</div></div>
-      <div class="kpi"><div class="v" id="kpi-damaged">0</div><div class="l">إجمالي التالف هذا الشهر</div></div>
-      <div class="kpi"><div class="v" id="kpi-waste">0%</div><div class="l">نسبة الهالك من الوارد</div></div>
-      <div class="kpi"><div class="v" id="kpi-waste-cost">0 ر.س</div><div class="l">تكلفة الهالك التقديرية هذا الشهر</div></div>
-      <div class="kpi"><div class="v" id="kpi-post-exit">0%</div><div class="l">نسبة التلف بعد الخروج (من الصادر) — مؤشر جودة الثلاجة الصغيرة</div></div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-head"><h3>مشتريات اليوم حسب الصنف</h3><span class="count" id="daily-purchases-count"></span></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>الكمية المشتراة</th><th>إجمالي التكلفة</th></tr></thead>
-        <tbody id="daily-purchases-body"></tbody>
-      </table></div>
-      <div class="empty" id="daily-purchases-empty" style="display:none">ما فيه مشتريات مسجلة بهذا التاريخ</div>
-    </div>
-
-    <div class="subgrid">
-      <div class="table-card">
-        <div class="table-head"><h3>استهلاك اليوم حسب الصنف واللون</h3><span class="count" id="daily-color-count"></span></div>
+      <div class="table-card" id="rp-dest-detail-card" style="display:none">
+        <div class="table-head"><h3 id="rp-dest-detail-title">تفاصيل استهلاك الوجهة</h3></div>
         <div class="table-scroll"><table>
-          <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
-          <tbody id="daily-color-body"></tbody>
+          <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th></tr></thead>
+          <tbody id="rp-dest-detail-body"></tbody>
         </table></div>
-        <div class="empty" id="daily-color-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
       </div>
+    </div>
+
+    <!-- التالف -->
+    <div class="rp-sec" data-sec="damage">
       <div class="table-card">
-        <div class="table-head"><h3>استهلاك اليوم حسب الوجهة</h3><span class="count" id="daily-dest-count"></span></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>الوجهة</th><th>الوحدة</th><th>الكمية</th></tr></thead>
-          <tbody id="daily-dest-body"></tbody>
-        </table></div>
-        <div class="empty" id="daily-dest-empty" style="display:none">ما فيه خروج مسجل بهذا التاريخ</div>
-        <div class="hint" style="padding:0 18px 12px">اضغط أي وجهة لعرض تفاصيلها الكاملة</div>
-      </div>
-    </div>
-
-    <div class="table-card" id="daily-dest-detail-card" style="display:none">
-      <div class="table-head"><h3 id="daily-dest-detail-title">تفاصيل استهلاك الوجهة</h3></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th></tr></thead>
-        <tbody id="daily-dest-detail-body"></tbody>
-      </table></div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-head"><h3>تفاصيل اليوم المحدد (كل الحركات)</h3><span class="count" id="daily-count"></span></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>الحركة</th><th>التاريخ</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>تكلفة الوحدة (شامل الضريبة والشحن)</th><th>تفاصيل</th><th>ملاحظات</th></tr></thead>
-        <tbody id="daily-body"></tbody>
-      </table></div>
-      <div class="empty" id="daily-empty" style="display:none">ما فيه حركات مسجلة بهذا التاريخ</div>
-    </div>
-
-    <div class="subgrid" id="monthly-ranklists" style="display:none">
-      <div class="card">
-        <h2>الأصناف الأكثر استهلاكاً هذا الشهر</h2>
-        <ul class="rank-list" id="monthly-top-consumed"></ul>
+        <div class="table-head"><h3>أسباب التلف</h3></div>
+        <div id="rp-reasons-wrap"></div>
       </div>
       <div class="card">
-        <h2>الأصناف الأكثر تلفاً هذا الشهر</h2>
-        <ul class="rank-list" id="monthly-top-damaged"></ul>
-      </div>
-    </div>
-
-    <div class="subgrid">
-      <div class="table-card">
-        <div class="table-head"><h3>استهلاك الشهر حسب الصنف واللون</h3><span class="count" id="monthly-color-count"></span></div>
-        <div class="table-scroll"><table>
-          <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th></tr></thead>
-          <tbody id="monthly-color-body"></tbody>
-        </table></div>
-        <div class="empty" id="monthly-color-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
+        <h2>الأصناف الأعلى تكلفة هالك</h2>
+        <p class="hint">حسب القيمة التقديرية المفقودة بالريال (يحتاج تسجيل سعر الوحدة عند الدخول)</p>
+        <ul class="rank-list" id="rp-top-damaged-cost"></ul>
       </div>
       <div class="table-card">
-        <div class="table-head"><h3>استهلاك الشهر حسب الوجهة</h3><span class="count" id="monthly-dest-count"></span></div>
+        <div class="table-head"><h3>التالف حسب الصنف واللون</h3><span class="count" id="rp-dmg-count"></span></div>
         <div class="table-scroll"><table>
-          <thead><tr><th>الوجهة</th><th>الوحدة</th><th>الكمية</th></tr></thead>
-          <tbody id="monthly-dest-body"></tbody>
+          <thead><tr><th>الصنف واللون</th><th>الوحدة</th><th>الكمية</th><th>منها بعد الخروج</th><th>التكلفة التقديرية</th></tr></thead>
+          <tbody id="rp-dmg-body"></tbody>
         </table></div>
-        <div class="empty" id="monthly-dest-empty" style="display:none">ما فيه خروج مسجل بهذا الشهر</div>
-        <div class="hint" style="padding:0 18px 12px">اضغط أي وجهة لعرض تفاصيلها الكاملة</div>
+        <div class="empty" id="rp-dmg-empty" style="display:none">ما فيه تالف بهذي الفترة</div>
       </div>
     </div>
 
-    <div class="table-card" id="monthly-dest-detail-card" style="display:none">
-      <div class="table-head"><h3 id="monthly-dest-detail-title">تفاصيل استهلاك الوجهة</h3></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>التاريخ</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>الحالة</th><th>ملاحظات</th><th>أضافه</th></tr></thead>
-        <tbody id="monthly-dest-detail-body"></tbody>
-      </table></div>
+    <!-- المشتريات -->
+    <div class="rp-sec" data-sec="purchases">
+      <div class="table-card">
+        <div class="table-head"><h3>المشتريات حسب الصنف</h3><span class="count" id="rp-buy-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>الكمية</th><th>إجمالي التكلفة</th><th>متوسط سعر الوحدة</th></tr></thead>
+          <tbody id="rp-buy-body"></tbody>
+        </table></div>
+        <div class="empty" id="rp-buy-empty" style="display:none">ما فيه مشتريات بهذي الفترة</div>
+      </div>
+      <div class="table-card">
+        <div class="table-head"><h3>المشتريات حسب المورد</h3><span class="count" id="rp-sup-count"></span></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>المورد</th><th>عدد الفواتير</th><th>عدد الأسطر</th><th>إجمالي التكلفة</th><th>النسبة</th></tr></thead>
+          <tbody id="rp-sup-body"></tbody>
+        </table></div>
+        <div class="empty" id="rp-sup-empty" style="display:none">ما فيه مشتريات بهذي الفترة</div>
+      </div>
     </div>
 
-    <div class="table-card">
-      <div class="table-head"><h3>تفاصيل الشهر المحدد حسب النوع واللون</h3><span class="count" id="monthly-count"></span></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>نوع الورد</th><th>اللون</th><th>الوحدة</th><th>إجمالي الوارد</th><th>تكلفة المشتريات</th><th>إجمالي الصادر</th><th>إجمالي التالف</th></tr></thead>
-        <tbody id="monthly-body"></tbody>
-      </table></div>
-      <div class="empty" id="monthly-empty" style="display:none">ما فيه حركات مسجلة بهذا الشهر</div>
+    <!-- الحركات -->
+    <div class="rp-sec" data-sec="moves">
+      <div class="table-card">
+        <div class="table-head"><h3>كل الحركات (دخول، خروج، تالف)</h3><span class="count" id="rp-moves-count"></span></div>
+        <div class="hint" id="rp-moves-note" style="padding:0 18px 8px"></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>التاريخ</th><th>الحركة</th><th>المورد</th><th>نوع الورد</th><th>اللون</th><th>الكمية</th><th>الوحدة</th><th>التفاصيل</th><th>ملاحظات</th></tr></thead>
+          <tbody id="rp-moves-body"></tbody>
+        </table></div>
+        <div class="empty" id="rp-moves-empty" style="display:none">ما فيه حركات بهذي الفترة</div>
+      </div>
     </div>
+
   </div>
 
   <!-- INVOICES (admin-only: owner + Saud) -->
@@ -770,14 +726,6 @@ function pad2(n){ return String(n).padStart(2,'0'); }
 function localDateStr(d){ d = d || new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function todayStr(){ return localDateStr(); }
 function monthStrNow(){ return localDateStr().slice(0,7); }
-function setMonthlyQuick(monthsBack){
-  const d = new Date();
-  d.setDate(1); // avoid month overflow (e.g. 31 Oct minus 1 month landing on 1 Oct)
-  d.setMonth(d.getMonth() - monthsBack);
-  const monthStr = localDateStr(d).slice(0,7);
-  document.getElementById('monthly-month').value = monthStr;
-  renderMonthlyReport();
-}
 
 function showToast(msg, isError){
   const t = document.getElementById('toast');
@@ -1010,14 +958,17 @@ function monthLabelAr(m){
 const periodState = {
   inflow:  { month:null, from:'', to:'' },
   outflow: { month:null, from:'', to:'' },
-  damaged: { month:null, from:'', to:'' }
+  damaged: { month:null, from:'', to:'' },
+  report:  { month:null, from:'', to:'', all:false }
 };
 function getPeriod(kind){
   const s = periodState[kind];
+  if(s.all) return { test: d => true, label: 'كل الفترات', key: 'all' };
   if(s.from || s.to){
     const from = s.from || '0000-01-01';
     const to = s.to || '9999-12-31';
-    const label = (s.from && s.to) ? `من ${fmtDate(s.from)} إلى ${fmtDate(s.to)}`
+    const label = (s.from && s.to && s.from === s.to) ? `يوم ${fmtDate(s.from)}`
+                : (s.from && s.to) ? `من ${fmtDate(s.from)} إلى ${fmtDate(s.to)}`
                 : s.from ? `من ${fmtDate(s.from)} حتى الآن`
                 : `حتى ${fmtDate(s.to)}`;
     return { test: d => !!d && d >= from && d <= to, label, key: `${s.from||'start'}_to_${s.to||'end'}` };
@@ -1422,10 +1373,10 @@ function renderRankList(elId, list, cls){
       </div>
     </li>`).join('');
 }
-function aggDamagedCost(){
+function aggDamagedCost(records){
   const avgMap = getAvgCostMap();
   const map = {};
-  data.damaged.forEach(r=>{
+  (records || data.damaged).forEach(r=>{
     const avg = avgMap[groupKey3(r.type,r.color,r.unit)] || 0;
     const cost = avg * (Number(r.qty)||0);
     const key = (r.type||'').trim()+'|'+(r.unit||'غصن');
@@ -1448,265 +1399,324 @@ function renderCostRankList(elId, list){
       </div>
     </li>`).join('');
 }
-function renderTopLists(){
-  renderRankList('top-consumed', aggByTypeUnit(data.outflow), '');
-  renderRankList('top-damaged', aggByTypeUnit(data.damaged), 'damaged');
-  renderCostRankList('top-damaged-cost', aggDamagedCost());
+// ================= Reports: ONE period selector, five focused views =================
+const UNIT_ORDER = ['غصن','ربطة','حبة'];
+function prevMonthStr(){
+  const d = new Date();
+  d.setDate(1); // avoid overflow (e.g. 31 Oct minus 1 month)
+  d.setMonth(d.getMonth() - 1);
+  return localDateStr(d).slice(0,7);
 }
-
-// ---- Reports ----
-function getDayRecords(dateStr){
-  const inflow = data.inflow.filter(r=>r.date===dateStr).map(r=>({...r, kind:'دخول', extra:r.condition}));
-  const outflow = data.outflow.filter(r=>r.date===dateStr).map(r=>({...r, kind:'خروج', extra: r.destination ? `${r.condition} — ${r.destination}` : r.condition}));
-  const damaged = data.damaged.filter(r=>r.date===dateStr).map(r=>({...r, kind:'تالف', extra:r.reason}));
-  return [...inflow,...outflow,...damaged].sort((a,b)=> a.kind.localeCompare(b.kind,'ar'));
+function reportData(){
+  const p = getPeriod('report');
+  return {
+    p,
+    inflow: data.inflow.filter(r => p.test(r.date)),
+    outflow: data.outflow.filter(r => p.test(r.date)),
+    damaged: data.damaged.filter(r => p.test(r.date))
+  };
 }
-function renderDailyPurchases(){
-  const dateStr = document.getElementById('daily-date').value;
-  const rows = getDayPurchasesByType(dateStr);
-  const body = document.getElementById('daily-purchases-body');
-  const empty = document.getElementById('daily-purchases-empty');
-  const count = document.getElementById('daily-purchases-count');
-  count.textContent = rows.length ? `${rows.length} صنف` : '';
-  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  body.innerHTML = rows.map(r=>`<tr>
-    <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.qty}</td><td>${r.cost.toFixed(2)} ر.س</td>
-  </tr>`).join('');
+// Quantities are never added across units: غصن / ربطة / حبة are always kept apart.
+function sumByUnit(records){
+  const m = {};
+  records.forEach(r => { const u = r.unit || 'غصن'; m[u] = (m[u] || 0) + (Number(r.qty) || 0); });
+  return m;
 }
-function getOutflowByColor(records){
+function unitKeys(...maps){
+  const set = new Set();
+  maps.forEach(m => Object.keys(m).forEach(k => set.add(k)));
+  return [...set].sort((a,b) => UNIT_ORDER.indexOf(a) - UNIT_ORDER.indexOf(b));
+}
+function fmtUnits(m, en){
+  const ks = unitKeys(m);
+  if(!ks.length) return '0';
+  return ks.map(u => `${m[u]} ${en ? tr(T.unit, u) : u}`).join(' · ');
+}
+function fmtRates(numM, denM, en){
+  const ks = unitKeys(numM, denM).filter(u => (numM[u] || 0) > 0 || (denM[u] || 0) > 0);
+  if(!ks.length) return '0%';
+  return ks.map(u => (denM[u] ? (((numM[u] || 0) / denM[u]) * 100).toFixed(1) + '%' : '—') + ' ' + (en ? tr(T.unit, u) : u)).join(' · ');
+}
+function itemLabel(r){
+  return (r.color && r.color !== '—' && String(r.color).trim()) ? `${r.type} - ${r.color}` : r.type;
+}
+function reportKpis(rd, en){
+  const avgMap = getAvgCostMap();
+  const purchases = rd.inflow.reduce((s,r) => s + landedCost(r) * (Number(r.qty) || 0), 0);
+  const wasteCost = rd.damaged.reduce((s,r) => s + (avgMap[groupKey3(r.type, r.color, r.unit)] || 0) * (Number(r.qty) || 0), 0);
+  const inM = sumByUnit(rd.inflow), outM = sumByUnit(rd.outflow), dmM = sumByUnit(rd.damaged);
+  const afterM = sumByUnit(rd.damaged.filter(r => r.damageSource === 'after'));
+  return {
+    purchases, wasteCost, inM, outM, dmM,
+    inTxt: fmtUnits(inM, en), outTxt: fmtUnits(outM, en), dmTxt: fmtUnits(dmM, en),
+    wasteTxt: fmtRates(dmM, inM, en), postTxt: fmtRates(afterM, outM, en)
+  };
+}
+function aggItems(rd){
   const map = {};
-  records.forEach(r=>{
-    const label = (r.color && r.color !== '—' && r.color.trim()) ? `${r.type} - ${r.color}` : r.type;
-    const key = label+'|'+(r.unit||'غصن');
-    if(!map[key]) map[key] = { color: label, unit:r.unit||'غصن', qty:0 };
-    map[key].qty += Number(r.qty)||0;
+  const get = r => {
+    const k = groupKey3(r.type, r.color, r.unit);
+    if(!map[k]) map[k] = { type:r.type, color:r.color || '—', unit:r.unit || 'غصن', in:0, cost:0, out:0, damaged:0 };
+    return map[k];
+  };
+  rd.inflow.forEach(r => { const g = get(r), q = Number(r.qty) || 0; g.in += q; g.cost += landedCost(r) * q; });
+  rd.outflow.forEach(r => { get(r).out += Number(r.qty) || 0; });
+  rd.damaged.forEach(r => { get(r).damaged += Number(r.qty) || 0; });
+  return Object.values(map).sort((a,b) => (a.type || '').localeCompare(b.type || '', 'ar') || a.color.localeCompare(b.color, 'ar'));
+}
+function aggConsumption(rd){
+  const map = {};
+  rd.outflow.forEach(r => {
+    const k = groupKey3(r.type, r.color, r.unit);
+    if(!map[k]) map[k] = { type:r.type, color:(r.color && r.color !== '—') ? r.color : '', unit:r.unit || 'غصن', label:itemLabel(r), qty:0 };
+    map[k].qty += Number(r.qty) || 0;
   });
-  return Object.values(map).sort((a,b)=> b.qty-a.qty);
+  return Object.values(map).sort((a,b) => b.qty - a.qty);
 }
 function getOutflowByDestination(records){
   const map = {};
-  records.forEach(r=>{
+  records.forEach(r => {
     const dest = r.destination || 'غير محدد';
-    const key = dest+'|'+(r.unit||'غصن');
-    if(!map[key]) map[key] = { destination:dest, unit:r.unit||'غصن', qty:0 };
-    map[key].qty += Number(r.qty)||0;
+    const key = dest + '|' + (r.unit || 'غصن');
+    if(!map[key]) map[key] = { destination:dest, unit:r.unit || 'غصن', qty:0 };
+    map[key].qty += Number(r.qty) || 0;
   });
-  return Object.values(map).sort((a,b)=> b.qty-a.qty);
+  return Object.values(map).sort((a,b) => b.qty - a.qty);
 }
-function renderBreakdownTable(idPrefix, rows, labelKey, clickScope){
-  const body = document.getElementById(`${idPrefix}-body`);
-  const empty = document.getElementById(`${idPrefix}-empty`);
-  const count = document.getElementById(`${idPrefix}-count`);
-  count.textContent = rows.length ? `${rows.length} صنف` : '';
-  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  body.innerHTML = rows.map(r=>{
-    if(clickScope){
-      return `<tr class="click-row" onclick="toggleDestDetail('${clickScope}','${esc(r[labelKey])}')"><td>${esc(r[labelKey])} 🔎</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`;
-    }
-    return `<tr><td>${esc(r[labelKey])}</td><td>${esc(r.unit)}</td><td>${r.qty}</td></tr>`;
-  }).join('');
+function aggDamagedItems(rd){
+  const avgMap = getAvgCostMap();
+  const map = {};
+  rd.damaged.forEach(r => {
+    const k = groupKey3(r.type, r.color, r.unit);
+    if(!map[k]) map[k] = { label:itemLabel(r), unit:r.unit || 'غصن', qty:0, after:0, cost:0 };
+    const g = map[k], q = Number(r.qty) || 0;
+    g.qty += q;
+    if(r.damageSource === 'after') g.after += q;
+    g.cost += (avgMap[k] || 0) * q;
+  });
+  return Object.values(map).sort((a,b) => b.qty - a.qty);
 }
-let dayOutflowCache = [];
-let monthOutflowCache = [];
-function renderDayColorDest(dateStr){
-  dayOutflowCache = data.outflow.filter(r=>r.date===dateStr);
-  renderBreakdownTable('daily-color', getOutflowByColor(dayOutflowCache), 'color');
-  renderBreakdownTable('daily-dest', getOutflowByDestination(dayOutflowCache), 'destination', 'daily');
-  document.getElementById('daily-dest-detail-card').style.display = 'none';
+function aggPurchasesByItem(rd){
+  const map = {};
+  rd.inflow.forEach(r => {
+    const k = groupKey3(r.type, r.color, r.unit);
+    if(!map[k]) map[k] = { type:r.type, color:r.color || '—', unit:r.unit || 'غصن', qty:0, cost:0 };
+    const g = map[k], q = Number(r.qty) || 0;
+    g.qty += q; g.cost += landedCost(r) * q;
+  });
+  const list = Object.values(map).sort((a,b) => b.cost - a.cost);
+  list.forEach(g => { g.avg = g.qty ? g.cost / g.qty : 0; });
+  return list;
 }
-function renderMonthColorDest(monthStr){
-  monthOutflowCache = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
-  renderBreakdownTable('monthly-color', getOutflowByColor(monthOutflowCache), 'color');
-  renderBreakdownTable('monthly-dest', getOutflowByDestination(monthOutflowCache), 'destination', 'monthly');
-  document.getElementById('monthly-dest-detail-card').style.display = 'none';
+function aggPurchasesBySupplier(rd){
+  const map = {};
+  let total = 0;
+  rd.inflow.forEach(r => {
+    const sup = (r.supplier || '').trim() || 'غير محدد';
+    if(!map[sup]) map[sup] = { supplier:sup, invoices:new Set(), lines:0, cost:0 };
+    const g = map[sup], cost = landedCost(r) * (Number(r.qty) || 0);
+    g.invoices.add((r.invoiceNo || 'بدون رقم') + '|' + r.date);
+    g.lines += 1; g.cost += cost; total += cost;
+  });
+  const list = Object.values(map).sort((a,b) => b.cost - a.cost);
+  list.forEach(g => { g.invoiceCount = g.invoices.size; g.pct = total ? (g.cost / total) * 100 : 0; });
+  return list;
 }
-function toggleDestDetail(scope, destination){
-  const records = (scope==='daily' ? dayOutflowCache : monthOutflowCache).filter(r=> (r.destination||'غير محدد') === destination);
-  const card = document.getElementById(`${scope}-dest-detail-card`);
-  const title = document.getElementById(`${scope}-dest-detail-title`);
-  const body = document.getElementById(`${scope}-dest-detail-body`);
-  title.textContent = `تفاصيل استهلاك: ${destination}`;
-  body.innerHTML = records.length ? records.map(r=>`<tr>
-    <td>${fmtDate(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
-    <td>${esc(r.condition)}</td><td class="notes">${esc(r.notes||'—')}</td><td>${userTag(r)}</td>
-  </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:16px">ما فيه سجلات</td></tr>';
-  card.style.display = 'block';
+function reportMoves(rd){
+  const out = [];
+  rd.inflow.forEach(r => out.push({ r, kind:'دخول', extra: r.condition || '' }));
+  rd.outflow.forEach(r => out.push({ r, kind:'خروج', extra: r.destination ? `${r.condition || ''} — ${r.destination}` : (r.condition || '') }));
+  rd.damaged.forEach(r => out.push({ r, kind:'تالف', extra: `${r.reason || ''} (${r.damageSource === 'after' ? 'بعد الخروج' : 'قبل الخروج'})` }));
+  return out;
+}
+function fillTable(prefix, rows, rowFn, word){
+  const body = document.getElementById(`${prefix}-body`);
+  const empty = document.getElementById(`${prefix}-empty`);
+  const count = document.getElementById(`${prefix}-count`);
+  count.textContent = rows.length ? `${rows.length} ${word || 'سطر'}` : '';
+  if(!rows.length){ body.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  body.innerHTML = rows.map(rowFn).join('');
+}
+function reasonsTableHtml(list, admin){
+  return `<div class="table-scroll"><table>
+    <thead><tr><th>السبب</th><th>الوحدة</th><th>الكمية</th><th>النسبة</th><th>عدد السجلات</th><th>منها بعد الخروج</th>${admin ? '<th>التكلفة التقديرية</th>' : ''}</tr></thead>
+    <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+let destDetailName = null;
+function showDestDetail(destination){
+  const rd = reportData();
+  const records = rd.outflow.filter(r => (r.destination || 'غير محدد') === destination).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+  document.getElementById('rp-dest-detail-title').textContent = `تفاصيل استهلاك: ${destination}`;
+  document.getElementById('rp-dest-detail-body').innerHTML = records.length
+    ? records.map(r => `<tr><td>${fmtDate(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.color || '—')}</td><td>${r.qty}</td><td>${esc(r.unit || 'غصن')}</td><td>${esc(r.condition || '—')}</td><td class="notes">${esc(r.notes || '—')}</td><td>${userTag(r)}</td></tr>`).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:16px">ما فيه سجلات</td></tr>';
+  document.getElementById('rp-dest-detail-card').style.display = 'block';
+}
+function toggleDestDetail(destination){ destDetailName = destination; showDestDetail(destination); }
+
+const MOVES_CAP = 400;
+function renderReport(){
+  if(!document.getElementById('rp-title')) return;
+  const rd = reportData();
+  const s = periodState.report;
+  const admin = isAdmin();
+  document.getElementById('rp-title').textContent = `التقرير: ${rd.p.label}`;
+  const mi = document.getElementById('rp-month');
+  const wantMonth = (s.all || s.from || s.to) ? '' : (s.month || monthStrNow());
+  if(mi.value !== wantMonth && document.activeElement !== mi) mi.value = wantMonth;
+  const act = s.all ? 'all'
+    : (s.from || s.to) ? ((s.from && s.from === s.to && s.from === todayStr()) ? 'today' : '')
+    : (!s.month || s.month === monthStrNow()) ? 'month'
+    : (s.month === prevMonthStr() ? 'prev' : '');
+  document.querySelectorAll('#panel-reports .rp-quick button').forEach(b => b.classList.toggle('active', b.dataset.rq === act));
+
+  // KPIs (quantities shown per unit)
+  const k = reportKpis(rd, false);
+  const setKpi = (id, txt) => { const el = document.getElementById(id); el.textContent = txt; el.className = 'v' + (txt.includes(' · ') ? ' sm' : ''); };
+  setKpi('rp-k-purchases', k.purchases.toFixed(0) + ' ر.س');
+  setKpi('rp-k-in', k.inTxt);
+  setKpi('rp-k-out', k.outTxt);
+  setKpi('rp-k-damaged', k.dmTxt);
+  setKpi('rp-k-waste', k.wasteTxt);
+  setKpi('rp-k-wastecost', k.wasteCost.toFixed(0) + ' ر.س');
+  setKpi('rp-k-postexit', k.postTxt);
+
+  // Summary view
+  renderRankList('rp-top-consumed', aggByTypeUnit(rd.outflow), '');
+  renderRankList('rp-top-damaged', aggByTypeUnit(rd.damaged), 'damaged');
+  fillTable('rp-items', aggItems(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.in}</td><td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td><td>${g.out}</td><td>${g.damaged}</td></tr>`, 'صنف');
+
+  // Consumption view
+  fillTable('rp-dest', getOutflowByDestination(rd.outflow), g => `<tr class="click-row" onclick="toggleDestDetail('${esc(g.destination)}')"><td>${esc(g.destination)} 🔎</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td></tr>`, 'وجهة');
+  fillTable('rp-color', aggConsumption(rd), g => `<tr><td>${esc(g.label)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td></tr>`, 'صنف');
+  if(destDetailName) showDestDetail(destDetailName);
+  else document.getElementById('rp-dest-detail-card').style.display = 'none';
+
+  // Damage view
+  document.getElementById('rp-reasons-wrap').innerHTML = rd.damaged.length
+    ? reasonsTableHtml(groupDamageReasons(rd.damaged, admin), admin)
+    : '<div class="empty">ما فيه تالف بهذي الفترة</div>';
+  renderCostRankList('rp-top-damaged-cost', aggDamagedCost(rd.damaged));
+  fillTable('rp-dmg', aggDamagedItems(rd), g => `<tr><td>${esc(g.label)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.after || '—'}</td><td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td></tr>`, 'صنف');
+
+  // Purchases view
+  fillTable('rp-buy', aggPurchasesByItem(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.qty}</td><td><strong>${g.cost.toFixed(0)} ر.س</strong></td><td>${g.avg ? g.avg.toFixed(2) + ' ر.س' : '—'}</td></tr>`, 'صنف');
+  fillTable('rp-sup', aggPurchasesBySupplier(rd), g => `<tr><td>${esc(g.supplier)}</td><td>${g.invoiceCount}</td><td>${g.lines}</td><td><strong>${g.cost.toFixed(0)} ر.س</strong></td><td>${g.pct.toFixed(0)}%</td></tr>`, 'مورد');
+
+  // Movements view (newest first, capped on screen; Excel has everything)
+  const moves = reportMoves(rd).sort((a,b) => (b.r.date || '').localeCompare(a.r.date || '') || a.kind.localeCompare(b.kind, 'ar'));
+  const shown = moves.slice(0, MOVES_CAP);
+  fillTable('rp-moves', shown, m => `<tr><td>${fmtDate(m.r.date)}</td><td>${m.kind}</td><td>${esc(m.r.supplier || '—')}</td><td>${esc(m.r.type)}</td><td>${esc(m.r.color || '—')}</td><td>${m.r.qty}</td><td>${esc(m.r.unit || 'غصن')}</td><td>${esc(m.extra || '—')}</td><td class="notes">${esc(m.r.notes || '—')}</td></tr>`, 'حركة');
+  document.getElementById('rp-moves-note').textContent = moves.length > MOVES_CAP ? `يعرض أحدث ${MOVES_CAP} حركة من ${moves.length} — صدّر Excel عشان تشوف الكل` : '';
+}
+function initReportControls(){
+  const s = periodState.report;
+  const mi = document.getElementById('rp-month');
+  const fi = document.getElementById('rp-from');
+  const ti = document.getElementById('rp-to');
+  const clearRange = () => { s.from = ''; s.to = ''; fi.value = ''; ti.value = ''; };
+  mi.addEventListener('change', () => { s.all = false; destDetailName = null; s.month = mi.value || null; clearRange(); renderReport(); });
+  const onRange = () => {
+    if(fi.value && ti.value && fi.value > ti.value){ showToast('"من" لازم يكون قبل "إلى"', true); return; }
+    s.all = false; destDetailName = null; s.from = fi.value; s.to = ti.value; renderReport();
+  };
+  fi.addEventListener('change', onRange);
+  ti.addEventListener('change', onRange);
+  document.querySelectorAll('#panel-reports .rp-quick button').forEach(b => b.addEventListener('click', () => {
+    s.all = false; destDetailName = null; clearRange();
+    const q = b.dataset.rq;
+    if(q === 'today'){ s.month = null; s.from = s.to = todayStr(); fi.value = ti.value = s.from; }
+    else if(q === 'prev'){ s.month = prevMonthStr(); }
+    else if(q === 'all'){ s.month = null; s.all = true; }
+    else { s.month = null; }
+    renderReport();
+  }));
+  document.querySelectorAll('#rp-pills .rp-pill').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#rp-pills .rp-pill').forEach(x => x.classList.toggle('active', x === b));
+    document.querySelectorAll('#panel-reports .rp-sec').forEach(sec => sec.classList.toggle('active', sec.dataset.sec === b.dataset.rs));
+  }));
 }
 
-function renderDailyReport(){
-  const dateStr = document.getElementById('daily-date').value;
-  renderDayColorDest(dateStr);
-  const recs = getDayRecords(dateStr);
-  const body = document.getElementById('daily-body');
-  const empty = document.getElementById('daily-empty');
-  const count = document.getElementById('daily-count');
-  count.textContent = recs.length ? `${recs.length} حركة` : '';
-  const dayInflow = data.inflow.filter(r=>r.date===dateStr);
-  const purchases = dayInflow.reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
-  document.getElementById('daily-summary').textContent = recs.length
-    ? `${dayInflow.length} دخول، ${data.outflow.filter(r=>r.date===dateStr).length} خروج، ${data.damaged.filter(r=>r.date===dateStr).length} تالف — إجمالي المشتريات: ${purchases.toFixed(0)} ر.س`
-    : 'ما فيه حركات بهذا اليوم';
-  if(!recs.length){ body.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  body.innerHTML = recs.map(r=>{
-    const cost = r.kind==='دخول' ? landedCost(r) : 0;
-    return `<tr>
-    <td>${esc(r.kind)}</td><td>${fmtDate(r.date)}</td><td>${esc(r.supplier||'—')}</td>
-    <td>${esc(r.type)}</td><td>${esc(r.color||'—')}</td><td>${r.qty}</td><td>${esc(r.unit||'غصن')}</td>
-    <td>${cost ? cost.toFixed(2)+' ر.س' : '—'}</td>
-    <td>${esc(r.extra||'—')}</td><td class="notes">${esc(r.notes||'—')}</td>
-  </tr>`;
-  }).join('');
-}
-function getMonthAgg(monthStr){
-  const map = {};
-  const bump=(type,color,unit,field,qty)=>{
-    const key=groupKey3(type,color,unit);
-    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
-    map[key][field]+=Number(qty)||0;
-  };
-  data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>{
-    bump(r.type,r.color,r.unit,'in',r.qty);
-    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
-  });
-  data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
-  data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
-  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
-}
-function getMonthAgg(monthStr){
-  const map = {};
-  const bump=(type,color,unit,field,qty)=>{
-    const key=groupKey3(type,color,unit);
-    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
-    map[key][field]+=Number(qty)||0;
-  };
-  data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>{
-    bump(r.type,r.color,r.unit,'in',r.qty);
-    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
-  });
-  data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
-  data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
-  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
-}
-function inDateRange(dateStr, from, to){
-  return dateStr && dateStr>=from && dateStr<=to;
-}
-function getRangeAgg(from, to){
-  const map = {};
-  const bump=(type,color,unit,field,qty)=>{
-    const key=groupKey3(type,color,unit);
-    if(!map[key]) map[key]={type,color:color||'—',unit:unit||'غصن',in:0,out:0,damaged:0,cost:0};
-    map[key][field]+=Number(qty)||0;
-  };
-  data.inflow.filter(r=>inDateRange(r.date,from,to)).forEach(r=>{
-    bump(r.type,r.color,r.unit,'in',r.qty);
-    map[groupKey3(r.type,r.color,r.unit)].cost += landedCost(r)*(Number(r.qty)||0);
-  });
-  data.outflow.filter(r=>inDateRange(r.date,from,to)).forEach(r=>bump(r.type,r.color,r.unit,'out',r.qty));
-  data.damaged.filter(r=>inDateRange(r.date,from,to)).forEach(r=>bump(r.type,r.color,r.unit,'damaged',r.qty));
-  return Object.values(map).sort((a,b)=>a.type.localeCompare(b.type,'ar'));
-}
-function renderRangeReport(from, to){
-  const rows = getRangeAgg(from, to);
-  const body = document.getElementById('range-body');
-  const count = document.getElementById('range-count');
-  const totalIn = rows.reduce((s,r)=>s+r.in,0);
-  const totalOut = rows.reduce((s,r)=>s+r.out,0);
-  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
-  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
-  const purchases = data.inflow.filter(r=>inDateRange(r.date,from,to)).reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
-  document.getElementById('kpi-range-purchases').textContent = purchases.toFixed(0) + ' ر.س';
-  document.getElementById('kpi-range-in').textContent = totalIn;
-  document.getElementById('kpi-range-out').textContent = totalOut;
-  document.getElementById('kpi-range-damaged').textContent = totalDamaged;
-  document.getElementById('kpi-range-waste').textContent = wastePct + '%';
-  document.getElementById('range-kpis').style.display = 'grid';
-  document.getElementById('range-table-card').style.display = 'block';
-  document.getElementById('range-summary-row').style.display = 'flex';
-  document.getElementById('range-summary').textContent = rows.length ? `${rows.length} صنف بين ${fmtDate(from)} و${fmtDate(to)}` : 'ما فيه حركات بهذي الفترة';
-  count.textContent = rows.length ? `${rows.length} صنف` : '';
-  body.innerHTML = rows.length
-    ? rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('')
-    : '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px">ما فيه حركات بهذي الفترة</td></tr>';
-  const rangeOutflow = data.outflow.filter(r=>inDateRange(r.date,from,to));
-  const rangeDamaged = data.damaged.filter(r=>inDateRange(r.date,from,to));
-  document.getElementById('range-ranklists').style.display = 'grid';
-  renderRankList('range-top-consumed', aggByTypeUnit(rangeOutflow), '');
-  renderRankList('range-top-damaged', aggByTypeUnit(rangeDamaged), 'damaged');
-}
-function exportRange(lang){
-  const from = document.getElementById('range-from').value;
-  const to = document.getElementById('range-to').value;
-  if(!from || !to){ showToast('اختر الفترة أول', true); return; }
-  const rows = getRangeAgg(from, to);
-  const H = T.headers;
-  const header = lang==='ar'
-    ? [H.type[0],H.color[0],H.unit[0],H.inTotal[0],H.purchaseCost[0],H.outTotal[0],H.damagedTotal[0]]
-    : [H.type[1],H.color[1],H.unit[1],H.inTotal[1],H.purchaseCost[1],H.outTotal[1],H.damagedTotal[1]];
-  const body = rows.map(r=> lang==='ar'
-    ? [r.type, r.color, r.unit, r.in, r.cost.toFixed(2), r.out, r.damaged]
-    : [tr(T.type,r.type), tr(T.color,r.color), tr(T.unit,r.unit), r.in, r.cost.toFixed(2), r.out, r.damaged]
-  );
-  const totalIn = rows.reduce((s,r)=>s+r.in,0);
-  const totalOut = rows.reduce((s,r)=>s+r.out,0);
-  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
-  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
-  const purchases = data.inflow.filter(r=>inDateRange(r.date,from,to)).reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
-  const summaryRows = lang==='ar'
-    ? [[`من: ${from} إلى: ${to}`],[`إجمالي مشتريات الورد: ${purchases.toFixed(0)} ر.س`],[`إجمالي الوارد: ${totalIn}`],[`إجمالي الصادر: ${totalOut}`],[`إجمالي التالف: ${totalDamaged}`],[`نسبة الهالك: ${wastePct}%`],[]]
-    : [[`From: ${from} To: ${to}`],[`Total Purchases: ${purchases.toFixed(0)} SAR`],[`Total In: ${totalIn}`],[`Total Out: ${totalOut}`],[`Total Damaged: ${totalDamaged}`],[`Waste Rate: ${wastePct}%`],[]];
-  downloadSheet([...summaryRows, header, ...body], `range-report-${from}_to_${to}-${lang}.xlsx`, lang==='ar');
-  showToast('تم تصدير تقرير الفترة');
-}
-function getDayPurchasesByType(dateStr){
-  const map = {};
-  data.inflow.filter(r=>r.date===dateStr).forEach(r=>{
-    const key = groupKey3(r.type,r.color,r.unit);
-    if(!map[key]) map[key] = { type:r.type, color:r.color||'—', unit:r.unit||'غصن', qty:0, cost:0 };
-    map[key].qty += Number(r.qty)||0;
-    map[key].cost += landedCost(r)*(Number(r.qty)||0);
-  });
-  return Object.values(map).sort((a,b)=> a.type.localeCompare(b.type,'ar'));
-}
-function renderMonthlyReport(){
-  const monthStr = document.getElementById('monthly-month').value;
-  renderMonthColorDest(monthStr);
-  const rows = getMonthAgg(monthStr);
-  const body = document.getElementById('monthly-body');
-  const empty = document.getElementById('monthly-empty');
-  const count = document.getElementById('monthly-count');
-  count.textContent = rows.length ? `${rows.length} صنف` : '';
-  const totalIn = rows.reduce((s,r)=>s+r.in,0);
-  const totalOut = rows.reduce((s,r)=>s+r.out,0);
-  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
-  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
-  const avgMap = getAvgCostMap();
-  const wasteCost = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr)
-    .reduce((s,r)=> s + (avgMap[groupKey3(r.type,r.color,r.unit)]||0) * (Number(r.qty)||0), 0);
-  const purchases = data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr)
-    .reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
-  const postExitQty = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr && r.damageSource==='after')
-    .reduce((s,r)=> s + (Number(r.qty)||0), 0);
-  const postExitPct = totalOut ? ((postExitQty/totalOut)*100).toFixed(1) : '0.0';
-  document.getElementById('monthly-summary').textContent = rows.length ? `${rows.length} صنف نشط هذا الشهر` : 'ما فيه حركات بهذا الشهر';
-  document.getElementById('monthly-kpis').style.display = rows.length ? 'grid' : 'none';
-  document.getElementById('kpi-purchases').textContent = purchases.toFixed(0) + ' ر.س';
-  document.getElementById('kpi-in').textContent = totalIn;
-  document.getElementById('kpi-out').textContent = totalOut;
-  document.getElementById('kpi-damaged').textContent = totalDamaged;
-  document.getElementById('kpi-waste').textContent = wastePct + '%';
-  document.getElementById('kpi-waste-cost').textContent = wasteCost.toFixed(0) + ' ر.س';
-  document.getElementById('kpi-post-exit').textContent = postExitPct + '%';
-  const monthOutflow = data.outflow.filter(r=>(r.date||'').slice(0,7)===monthStr);
-  const monthDamaged = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr);
-  document.getElementById('monthly-ranklists').style.display = 'grid';
-  renderRankList('monthly-top-consumed', aggByTypeUnit(monthOutflow), '');
-  renderRankList('monthly-top-damaged', aggByTypeUnit(monthDamaged), 'damaged');
-  if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  body.innerHTML = rows.map(r=>`<tr><td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.in}</td><td>${r.cost ? r.cost.toFixed(0)+' ر.س' : '—'}</td><td>${r.out}</td><td>${r.damaged}</td></tr>`).join('');
+// ---- Excel: one workbook with every view of the selected period ----
+function exportReport(lang){
+  const en = lang === 'en';
+  const rd = reportData();
+  if(!rd.inflow.length && !rd.outflow.length && !rd.damaged.length){ showToast('ما فيه بيانات بهذي الفترة للتصدير', true); return; }
+  const admin = isAdmin();
+  const L = (ar, e) => en ? e : ar;
+  const tType = v => en ? tr(T.type, v) : (v || '');
+  const tColor = v => String(v || '').split(/[,،]/).map(x => x.trim()).filter(x => x && x !== '—').map(x => en ? tr(T.color, x) : x).join(en ? ', ' : '، ');
+  const tUnit = v => en ? tr(T.unit, v || 'غصن') : (v || 'غصن');
+  const k = reportKpis(rd, en);
+  const sheets = [];
+
+  sheets.push({ name: L('الملخص', 'Summary'), aoa: [
+    [L('البند', 'Metric'), L('القيمة', 'Value')],
+    [L('الفترة', 'Period'), en ? rd.p.key : rd.p.label],
+    [L('إجمالي المشتريات (ريال)', 'Total Purchases (SAR)'), round2(k.purchases)],
+    [L('الوارد', 'Inflow'), k.inTxt],
+    [L('الصادر (الاستهلاك)', 'Outflow (Consumption)'), k.outTxt],
+    [L('التالف', 'Damaged'), k.dmTxt],
+    [L('نسبة الهالك من الوارد', 'Waste rate of inflow'), k.wasteTxt],
+    [L('تكلفة الهالك التقديرية (ريال)', 'Estimated Waste Cost (SAR)'), round2(k.wasteCost)],
+    [L('التلف بعد الخروج (من الصادر)', 'Post-exit damage (of outflow)'), k.postTxt]
+  ]});
+
+  sheets.push({ name: L('حركة الأصناف', 'Items'), aoa: [
+    [L('نوع الورد', 'Flower Type'), L('اللون', 'Color'), L('الوحدة', 'Unit'), L('إجمالي الوارد', 'Total In'), L('تكلفة المشتريات (ريال)', 'Purchase Cost (SAR)'), L('إجمالي الصادر', 'Total Out'), L('إجمالي التالف', 'Total Damaged')],
+    ...aggItems(rd).map(g => [tType(g.type), tColor(g.color), tUnit(g.unit), g.in, round2(g.cost), g.out, g.damaged])
+  ]});
+
+  if(rd.outflow.length){
+    sheets.push({ name: L('الاستهلاك حسب الوجهة', 'Consumption by Dest'), aoa: [
+      [L('الوجهة', 'Destination'), L('الوحدة', 'Unit'), L('الكمية', 'Quantity')],
+      ...getOutflowByDestination(rd.outflow).map(g => [en ? (DEST_EN[g.destination] || g.destination) : g.destination, tUnit(g.unit), g.qty])
+    ]});
+    sheets.push({ name: L('الاستهلاك حسب الصنف', 'Consumption by Item'), aoa: [
+      [L('نوع الورد', 'Flower Type'), L('اللون', 'Color'), L('الوحدة', 'Unit'), L('الكمية', 'Quantity')],
+      ...aggConsumption(rd).map(g => [tType(g.type), tColor(g.color), tUnit(g.unit), g.qty])
+    ]});
+  }
+
+  if(rd.damaged.length){
+    const list = groupDamageReasons(rd.damaged, admin);
+    const head = en
+      ? ['Reason', 'Unit', 'Quantity', 'Share of unit total (%)', 'Records', 'Of which after exit']
+      : ['السبب', 'الوحدة', 'الكمية', 'النسبة من تالف الوحدة (%)', 'عدد السجلات', 'منها بعد الخروج'];
+    if(admin) head.push(L('التكلفة التقديرية (ريال)', 'Estimated Cost (SAR)'));
+    sheets.push({ name: L('أسباب التلف', 'Damage Reasons'), aoa: [head, ...list.map(g => {
+      const row = [en ? tr(T.reason, g.reason) : g.reason, tUnit(g.unit), g.qty, Math.round(g.pct * 10) / 10, g.count, g.after];
+      if(admin) row.push(round2(g.cost));
+      return row;
+    })]});
+  }
+
+  if(rd.inflow.length){
+    sheets.push({ name: L('المشتريات حسب المورد', 'Purchases by Supplier'), aoa: [
+      [L('المورد', 'Supplier'), L('عدد الفواتير', 'Invoices'), L('عدد الأسطر', 'Lines'), L('إجمالي التكلفة (ريال)', 'Total Cost (SAR)'), L('النسبة من المشتريات (%)', 'Share of purchases (%)')],
+      ...aggPurchasesBySupplier(rd).map(g => [g.supplier, g.invoiceCount, g.lines, round2(g.cost), Math.round(g.pct * 10) / 10])
+    ]});
+  }
+
+  const moves = reportMoves(rd).sort((a,b) => (a.r.date || '').localeCompare(b.r.date || ''));
+  sheets.push({ name: L('كل الحركات', 'All Movements'), aoa: [
+    [L('التاريخ', 'Date'), L('الحركة', 'Movement'), L('المورد', 'Supplier'), L('نوع الورد', 'Flower Type'), L('اللون', 'Color'), L('الكمية', 'Quantity'), L('الوحدة', 'Unit'), L('التفاصيل', 'Details'), L('ملاحظات', 'Notes'), L('أضافه', 'Added By')],
+    ...moves.map(m => {
+      const r = m.r;
+      let details = m.extra;
+      if(en){
+        if(m.kind === 'دخول') details = tr(T.condition, r.condition) || '';
+        else if(m.kind === 'خروج') details = `${tr(T.condition, r.condition) || ''}${r.destination ? ' — ' + (DEST_EN[r.destination] || r.destination) : ''}`;
+        else details = `${tr(T.reason, r.reason) || ''} (${SOURCE_LABEL[r.damageSource === 'after' ? 'after' : 'before'][1]})`;
+      }
+      return [en ? (r.date || '') : fmtDate(r.date), en ? tr(T.kind, m.kind) : m.kind, r.supplier || '', tType(r.type), tColor(r.color), Number(r.qty) || 0, tUnit(r.unit), details, r.notes || '', userName(r)];
+    })
+  ]});
+
+  downloadWorkbook(sheets, `report-${rd.p.key}-${lang}.xlsx`, !en);
+  showToast('تم تصدير التقرير');
 }
 
 function colWidths(aoa){
@@ -1830,52 +1840,6 @@ function exportLog(kind, lang){
   downloadWorkbook(sheets, `${kind}-${tag}-${lang}.xlsx`, !en);
   showToast('تم تصدير الملف');
 }
-function exportDaily(lang){
-  const dateStr = document.getElementById('daily-date').value;
-  const recs = getDayRecords(dateStr);
-  const H = T.headers;
-  const header = lang==='ar'
-    ? [H.movement[0],H.date[0],H.supplier[0],H.type[0],H.color[0],H.qty[0],H.unit[0],H.unitPrice[0],H.details[0],H.notes[0]]
-    : [H.movement[1],H.date[1],H.supplier[1],H.type[1],H.color[1],H.qty[1],H.unit[1],H.unitPrice[1],H.details[1],H.notes[1]];
-  const rows = recs.map(r=>{
-    const cost = r.kind==='دخول' ? landedCost(r) : 0;
-    const priceStr = cost ? cost.toFixed(2) : '';
-    if(lang==='ar'){
-      return [r.kind, fmtDate(r.date), r.supplier||'—', r.type, r.color||'—', r.qty, r.unit||'غصن', priceStr||'—', r.extra||'—', r.notes||'—'];
-    }
-    const extra = r.kind==='تالف' ? tr(T.reason, r.extra) : tr(T.condition, r.extra);
-    return [tr(T.kind,r.kind), r.date||'', r.supplier||'-', tr(T.type,r.type), tr(T.color,r.color)||'-', r.qty, tr(T.unit,r.unit)||'Stem', priceStr||'-', extra||'-', r.notes||'-'];
-  });
-  downloadSheet([header, ...rows], `daily-report-${dateStr}-${lang}.xlsx`, lang==='ar');
-  showToast('تم تصدير التقرير اليومي');
-}
-function exportMonthly(lang){
-  const monthStr = document.getElementById('monthly-month').value;
-  const rows = getMonthAgg(monthStr);
-  const H = T.headers;
-  const header = lang==='ar'
-    ? [H.type[0],H.color[0],H.unit[0],H.inTotal[0],H.purchaseCost[0],H.outTotal[0],H.damagedTotal[0]]
-    : [H.type[1],H.color[1],H.unit[1],H.inTotal[1],H.purchaseCost[1],H.outTotal[1],H.damagedTotal[1]];
-  const body = rows.map(r=> lang==='ar'
-    ? [r.type, r.color, r.unit, r.in, r.cost.toFixed(2), r.out, r.damaged]
-    : [tr(T.type,r.type), tr(T.color,r.color), tr(T.unit,r.unit), r.in, r.cost.toFixed(2), r.out, r.damaged]
-  );
-  const totalIn = rows.reduce((s,r)=>s+r.in,0);
-  const totalOut = rows.reduce((s,r)=>s+r.out,0);
-  const totalDamaged = rows.reduce((s,r)=>s+r.damaged,0);
-  const wastePct = totalIn ? ((totalDamaged/totalIn)*100).toFixed(1) : '0.0';
-  const avgMap = getAvgCostMap();
-  const wasteCost = data.damaged.filter(r=>(r.date||'').slice(0,7)===monthStr)
-    .reduce((s,r)=> s + (avgMap[groupKey3(r.type,r.color,r.unit)]||0) * (Number(r.qty)||0), 0);
-  const purchases = data.inflow.filter(r=>(r.date||'').slice(0,7)===monthStr)
-    .reduce((s,r)=> s + landedCost(r)*(Number(r.qty)||0), 0);
-  const summaryRows = lang==='ar'
-    ? [[`الشهر: ${monthStr}`],[`إجمالي مشتريات الورد: ${purchases.toFixed(0)} ر.س`],[`إجمالي الوارد: ${totalIn}`],[`إجمالي الصادر: ${totalOut}`],[`إجمالي التالف: ${totalDamaged}`],[`نسبة الهالك: ${wastePct}%`],[`تكلفة الهالك التقديرية: ${wasteCost.toFixed(0)} ر.س`],[]]
-    : [[`Month: ${monthStr}`],[`Total Purchases: ${purchases.toFixed(0)} SAR`],[`Total In: ${totalIn}`],[`Total Out: ${totalOut}`],[`Total Damaged: ${totalDamaged}`],[`Waste Rate: ${wastePct}%`],[`Estimated Waste Cost: ${wasteCost.toFixed(0)} SAR`],[]];
-  downloadSheet([...summaryRows, header, ...body], `monthly-report-${monthStr}-${lang}.xlsx`, lang==='ar');
-  showToast('تم تصدير التقرير الشهري');
-}
-
 // ---- Multi-item invoice (inflow) ----
 let pendingItems = [];
 
@@ -2240,8 +2204,8 @@ async function deleteInvoiceGroup(key){
 
 function renderAll(){
   renderTable('inflow'); renderTable('outflow'); renderTable('damaged');
-  renderShortage(); renderOpening(); renderBalance(); renderTopLists();
-  renderDailyPurchases(); renderDailyReport(); renderMonthlyReport();
+  renderShortage(); renderOpening(); renderBalance();
+  renderReport();
   renderPriceComparison(); renderInvoiceGroups();
 }
 
@@ -2255,25 +2219,14 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 document.getElementById('hdr-date').value = todayStr();
-document.getElementById('daily-date').value = todayStr();
-document.getElementById('monthly-month').value = monthStrNow();
-document.getElementById('daily-date').addEventListener('change', () => { renderDailyPurchases(); renderDailyReport(); });
-document.getElementById('monthly-month').addEventListener('change', renderMonthlyReport);
 
 wireForm('outflow');
 wireForm('damaged');
 wireForm('opening');
 wireInvoiceFlow();
 initPeriodBars();
+initReportControls();
 
-document.getElementById('form-range-report').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const from = document.getElementById('range-from').value;
-  const to = document.getElementById('range-to').value;
-  if(!from || !to){ showToast('اختر التاريخين أول', true); return; }
-  if(from > to){ showToast('"من تاريخ" لازم يكون قبل "إلى تاريخ"', true); return; }
-  renderRangeReport(from, to);
-});
 
 document.getElementById('inflow-search').addEventListener('input', (e) => {
   inflowSearchTerm = e.target.value.trim().toLowerCase();
