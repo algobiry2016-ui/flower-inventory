@@ -2282,11 +2282,13 @@ async function deleteInvoiceGroup(key){
 }
 
 // ================= (1) Stock check =================
-// Tolerant matching (spaces / hamza / ة / ى) so a spelling variant never causes a wrong rejection.
+// Two views of the same item, and the check uses the LARGER one so it never contradicts the balance table:
+//  - exact:    same grouping as the balance table (what the user sees in the row)
+//  - tolerant: also merges spelling variants (hamza / ة / ى / extra spaces)
 function stockKey(type, color, unit){ return normalizeAr(type) + '|' + normalizeAr(color) + '|' + (unit || 'غصن'); }
-function stockBalance(type, color, unit, exclude){
-  const key = stockKey(type, color, unit);
-  const match = r => stockKey(r.type, r.color, r.unit) === key;
+function balanceBy(keyFn, type, color, unit, exclude){
+  const key = keyFn(type, color, unit);
+  const match = r => keyFn(r.type, r.color, r.unit) === key;
   const skip = (kind, r) => !!exclude && exclude.kind === kind && exclude.id === r.id;
   let bal = 0;
   data.opening.forEach(r => { if(match(r) && !skip('opening', r)) bal += Number(r.qty) || 0; });
@@ -2296,6 +2298,20 @@ function stockBalance(type, color, unit, exclude){
   data.damaged.forEach(r => { if(r.damageSource !== 'after' && match(r) && !skip('damaged', r)) bal -= Number(r.qty) || 0; });
   return bal;
 }
+function stockBalance(type, color, unit, exclude){
+  return Math.max(
+    balanceBy(groupKey3, type, color, unit, exclude),
+    balanceBy(stockKey, type, color, unit, exclude)
+  );
+}
+// Other rows of the same item (another unit / colour / spelling) that DO have enough stock.
+function stockHint(rec, qty){
+  const t = normalizeAr(rec.type), own = groupKey3(rec.type, rec.color, rec.unit);
+  return balanceRowsList()
+    .filter(r => normalizeAr(r.type) === t && r.key !== own && r.balance >= qty && r.balance > 0)
+    .slice(0, 2)
+    .map(r => `${countRowLabel(r)}: ${r.balance}`);
+}
 // Returns a message when the movement is larger than the available stock, otherwise ''.
 function stockProblem(kind, rec, exclude){
   if(kind === 'damaged' && rec.damageSource === 'after') return '';
@@ -2303,7 +2319,9 @@ function stockProblem(kind, rec, exclude){
   const qty = Number(rec.qty) || 0;
   const bal = stockBalance(rec.type, rec.color, rec.unit, exclude);
   if(qty > bal){
-    return `الكمية أكبر من الرصيد — المتاح من "${itemLabel({ type:rec.type, color:rec.color })}" هو ${Math.max(bal, 0)} ${rec.unit || 'غصن'} بس`;
+    const hints = stockHint(rec, qty);
+    return `الكمية أكبر من الرصيد — المتاح من "${itemLabel({ type:rec.type, color:rec.color })}" هو ${Math.max(bal, 0)} ${rec.unit || 'غصن'} بس`
+      + (hints.length ? ` — لكن فيه رصيد كافي بـ: ${hints.join('، ')} (تأكد من الوحدة واللون)` : '');
   }
   return '';
 }
