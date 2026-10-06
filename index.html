@@ -229,10 +229,10 @@
         <div class="full"><label>ملاحظات <span class="opt">(اختياري)</span></label><input type="text" name="notes" placeholder="اختياري"></div>
 
         <details class="full adv">
-          <summary>تفاصيل هذا الصنف بالفاتورة (اختياري) — كمية الفاتورة، السعر، نقص</summary>
+          <summary>تفاصيل هذا الصنف بالفاتورة — السعر مطلوب (وكمية الفاتورة اختيارية)</summary>
           <div class="adv-grid">
             <div><label>الكمية حسب الفاتورة</label><input type="number" name="invoiceQty" min="1" placeholder="اتركه فاضي إذا مطابقة"></div>
-            <div><label>سعر الوحدة (ريال)</label><input type="number" name="unitPrice" min="0" step="0.01" placeholder="سعر سطر الصنف بالفاتورة"></div>
+            <div><label>سعر الوحدة (ريال) — مطلوب</label><input type="number" name="unitPrice" min="0.01" step="0.01" placeholder="سعر سطر الصنف بالفاتورة"></div>
             <div class="full"><label>طريقة تسعير المورد</label>
               <select name="vatMode" id="item-vatMode">
                 <option value="excl">السعر قبل الضريبة (تُضاف 15%)</option>
@@ -333,7 +333,7 @@
       <p class="hint">حدد "مصدر التلف" صح: لو الورد تلف وهو لسه بالثلاجة الرئيسية اختر الخيار الأول (يخصم من الرصيد). لو تلف بعد ما عبده طلّعه للثلاجة الصغيرة أو بعد التحضير، اختر الخيار الثاني — هذا الورد أصلاً انخصم من الرصيد وقت "الخروج"، فما يُخصم مرة ثانية، بس يتسجل كخسارة للمتابعة.</p>
       <form id="form-damaged">
         <div><label>التاريخ</label><input type="date" name="date" required></div>
-        <div><label>المورد <span class="opt">(اختياري)</span></label><input type="text" name="supplier" placeholder="اسم المورد"></div>
+        <div><label>المورد <span class="opt">(اختياري)</span></label><select name="supplier" id="damaged-supplier"><option value="">— بدون —</option></select></div>
         <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
         <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors"></div>
         <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
@@ -409,6 +409,7 @@
       <div class="table-head">
         <h3>الرصيد الحالي حسب النوع واللون والوحدة</h3>
         <div style="display:flex;align-items:center;gap:10px">
+          <button type="button" class="ghost sm" onclick="openCountModal()">جرد</button>
           <input type="text" id="balance-search" placeholder="ابحث عن صنف" style="width:160px;padding:6px 10px;font-size:12.5px">
           <span class="count">افتتاحي + وارد − صادر − تالف = الرصيد</span>
         </div>
@@ -665,6 +666,40 @@
         <div class="actions"><span></span><button type="submit" class="primary">حفظ القائمة</button></div>
       </form>
     </div>
+
+    <div class="card" id="cleanup-card" style="margin-top:16px;display:none">
+      <h2>تنظيف الأسماء (مؤقت)</h2>
+      <p class="hint">يوحّد أسماء الأصناف والألوان بالسجلات القديمة (مسافات زايدة، همزة). يعرض لك كل تغيير قبل ما ينفّذ، ولا يمسح أي سجل.</p>
+      <button type="button" class="primary" onclick="openCleanupModal()">تنظيف الأسماء</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="count-modal">
+  <div class="modal-card" style="max-width:420px">
+    <div class="modal-head"><h3>جرد</h3><button class="modal-close" onclick="closeCountModal()">✕</button></div>
+    <form id="form-count" style="grid-template-columns:1fr">
+      <div class="full"><label>الصنف واللون</label><select id="count-item" required></select></div>
+      <div class="full"><div class="hint" id="count-system" style="margin:0"></div></div>
+      <div class="full"><label>العدد الفعلي</label><input type="number" id="count-actual" min="0" step="1" required></div>
+      <div class="full"><div class="hint" id="count-diff" style="margin:0"></div></div>
+      <div class="actions"><span></span><button type="submit" class="primary">حفظ الجرد</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cleanup-modal">
+  <div class="modal-card" style="max-width:760px">
+    <div class="modal-head"><h3>تنظيف الأسماء</h3><button class="modal-close" onclick="closeCleanupModal()">✕</button></div>
+    <div class="hint" id="cleanup-summary" style="margin:0 0 12px"></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>النوع</th><th>الاسم الحالي</th><th>بعد التنظيف</th><th>عدد السجلات</th></tr></thead>
+      <tbody id="cleanup-body"></tbody>
+    </table></div>
+    <div class="actions" style="margin-top:16px">
+      <button type="button" class="ghost" onclick="closeCleanupModal()">إلغاء</button>
+      <button type="button" class="primary" id="cleanup-confirm" onclick="confirmCleanup()">تأكيد</button>
+    </div>
   </div>
 </div>
 
@@ -713,9 +748,9 @@ const T = {
     purchaseCost:['تكلفة المشتريات','Purchase Cost'],
     unitPrice:['سعر الوحدة','Unit Price']
   },
-  kind:{'دخول':'Inflow','خروج':'Outflow','تالف':'Damaged'},
+  kind:{'دخول':'Inflow','خروج':'Outflow','تالف':'Damaged','تسوية جرد':'Count adjustment (increase)'},
   condition:{'ممتازة':'Excellent','جيدة':'Good','متوسطة':'Fair','ضعيفة':'Poor'},
-  reason:{'ذبول طبيعي':'Natural wilting','عطل بالتبريد':'Cooling malfunction','تلف أثناء النقل':'Damaged in transit','تخزين زائد':'Overstock','سوء تعامل':'Mishandling','أخرى':'Other'},
+  reason:{'فرق جرد':'Inventory count difference','ذبول طبيعي':'Natural wilting','عطل بالتبريد':'Cooling malfunction','تلف أثناء النقل':'Damaged in transit','تخزين زائد':'Overstock','سوء تعامل':'Mishandling','أخرى':'Other'},
   type:{'رز هولندي':'Dutch Rose','رز اكوادوري':'Ecuadorian Rose','توليب':'Tulip','اوركيد':'Orchid','ليليوم':'Lily','جيبسوفيلا':"Baby's Breath",'بيوني':'Peony','دوار الشمس':'Sunflower'},
   color:{'احمر':'Red','ابيض':'White','وردي':'Pink','اصفر':'Yellow','برتقالي':'Orange','بنفسجي':'Purple','مشكل':'Mixed'},
   unit:{'غصن':'Stem','ربطة':'Bunch','حبة':'Piece'}
@@ -757,12 +792,15 @@ async function fsDelete(collection, id){
 }
 
 let listenersAttached = false;
+const loadedKinds = {};
+function allLoaded(){ return ['inflow','outflow','damaged','opening'].every(k => loadedKinds[k]); }
 function attachListeners(){
   if(listenersAttached) return;
   listenersAttached = true;
   ['inflow','outflow','damaged','opening'].forEach(kind=>{
     db.collection(KEYS[kind]).onSnapshot(snap=>{
       data[kind] = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      loadedKinds[kind] = true;
       setStatus('متصل — بيانات مشتركة مع الفريق (تحديث لحظي)', true);
       renderAll();
     }, err=>{ setStatus('تعذر الاتصال بقاعدة البيانات', false); });
@@ -817,11 +855,25 @@ function updateInvoicesTabVisibility(){
   }
 }
 
+let catalogSig = '';
 function refreshCatalogLists(){
-  const typesSet = Array.from(new Set([...DEFAULT_TYPES, ...data.types]));
-  const colorsSet = Array.from(new Set([...DEFAULT_COLORS, ...data.colors]));
-  document.getElementById('flowerTypes').innerHTML = typesSet.map(t=>`<option value="${esc(t)}">`).join('');
-  document.getElementById('flowerColors').innerHTML = colorsSet.map(c=>`<option value="${esc(c)}">`).join('');
+  const types = [], colors = [];
+  const addType = n => { if(n && String(n).trim()) types.push(canonicalizeTerm(String(n))); };
+  const addColor = n => String(n || '').split(/[,،]/).forEach(x => { if(x.trim()) colors.push(canonicalizeTerm(x)); });
+  DEFAULT_TYPES.forEach(addType); data.types.forEach(addType);
+  DEFAULT_COLORS.forEach(addColor); data.colors.forEach(addColor);
+  ['inflow','outflow','damaged','opening'].forEach(k => data[k].forEach(r => { addType(r.type); addColor(r.color); }));
+  const uniq = arr => {
+    const seen = new Set(), out = [];
+    arr.forEach(n => { const k = normalizeAr(n); if(k && !seen.has(k)){ seen.add(k); out.push(n); } });
+    return out.sort((a,b) => a.localeCompare(b, 'ar'));
+  };
+  const t = uniq(types), co = uniq(colors);
+  const sig = t.join('\u0001') + '\u0002' + co.join('\u0001');
+  if(sig === catalogSig) return; // nothing changed: don't touch the open suggestion list
+  catalogSig = sig;
+  document.getElementById('flowerTypes').innerHTML = t.map(x=>`<option value="${esc(x)}">`).join('');
+  document.getElementById('flowerColors').innerHTML = co.map(x=>`<option value="${esc(x)}">`).join('');
 }
 
 // ---- Text normalization & aliases (handles hamza variants + staff spelling differences) ----
@@ -1160,6 +1212,10 @@ function wireForm(kind){
       const c = canonicalizeTypeColor(record.type, record.color);
       record.type = c.type; record.color = c.color;
     }
+    if(kind === 'outflow' || kind === 'damaged'){
+      const problem = stockProblem(kind, record);
+      if(problem){ showToast(problem, true); return; }
+    }
     record.addedBy = auth.currentUser ? auth.currentUser.email : '';
     record.addedAt = firebase.firestore.FieldValue.serverTimestamp();
     btn.disabled = true; btn.textContent = 'جاري الإضافة…';
@@ -1413,7 +1469,8 @@ function reportData(){
     p,
     inflow: data.inflow.filter(r => p.test(r.date)),
     outflow: data.outflow.filter(r => p.test(r.date)),
-    damaged: data.damaged.filter(r => p.test(r.date))
+    damaged: data.damaged.filter(r => p.test(r.date)),
+    adjust: data.opening.filter(r => r.adjustment && p.test(r.date)) // count surpluses
   };
 }
 // Quantities are never added across units: غصن / ربطة / حبة are always kept apart.
@@ -1527,6 +1584,7 @@ function reportMoves(rd){
   rd.inflow.forEach(r => out.push({ r, kind:'دخول', extra: r.condition || '' }));
   rd.outflow.forEach(r => out.push({ r, kind:'خروج', extra: r.destination ? `${r.condition || ''} — ${r.destination}` : (r.condition || '') }));
   rd.damaged.forEach(r => out.push({ r, kind:'تالف', extra: `${r.reason || ''} (${r.damageSource === 'after' ? 'بعد الخروج' : 'قبل الخروج'})` }));
+  rd.adjust.forEach(r => out.push({ r, kind:'تسوية جرد', extra:'فرق جرد (زيادة)' }));
   return out;
 }
 function fillTable(prefix, rows, rowFn, word){
@@ -1643,7 +1701,7 @@ function initReportControls(){
 function exportReport(lang){
   const en = lang === 'en';
   const rd = reportData();
-  if(!rd.inflow.length && !rd.outflow.length && !rd.damaged.length){ showToast('ما فيه بيانات بهذي الفترة للتصدير', true); return; }
+  if(!rd.inflow.length && !rd.outflow.length && !rd.damaged.length && !rd.adjust.length){ showToast('ما فيه بيانات بهذي الفترة للتصدير', true); return; }
   const admin = isAdmin();
   const L = (ar, e) => en ? e : ar;
   const tType = v => en ? tr(T.type, v) : (v || '');
@@ -1709,6 +1767,7 @@ function exportReport(lang){
       if(en){
         if(m.kind === 'دخول') details = tr(T.condition, r.condition) || '';
         else if(m.kind === 'خروج') details = `${tr(T.condition, r.condition) || ''}${r.destination ? ' — ' + (DEST_EN[r.destination] || r.destination) : ''}`;
+        else if(m.kind === 'تسوية جرد') details = 'Inventory count difference (increase)';
         else details = `${tr(T.reason, r.reason) || ''} (${SOURCE_LABEL[r.damageSource === 'after' ? 'after' : 'before'][1]})`;
       }
       return [en ? (r.date || '') : fmtDate(r.date), en ? tr(T.kind, m.kind) : m.kind, r.supplier || '', tType(r.type), tColor(r.color), Number(r.qty) || 0, tUnit(r.unit), details, r.notes || '', userName(r)];
@@ -1864,6 +1923,12 @@ function wireInvoiceFlow(){
     const fd = new FormData(itemForm);
     const item = { date: hdrDate, supplier: hdrSupplier, invoiceNo: hdrInvoiceNo, origin: hdrOrigin, _tempId: Date.now()+Math.floor(Math.random()*1000) };
     for(const [k,v] of fd.entries()) item[k] = v;
+    if(!(Number(item.unitPrice) > 0)){
+      const adv = itemForm.querySelector('details.adv'); if(adv) adv.open = true;
+      const pi = itemForm.querySelector('[name="unitPrice"]'); if(pi) pi.focus();
+      showToast('سعر الوحدة مطلوب ولازم يكون أكبر من صفر — بدونه ما تنحسب تكلفة الصنف', true);
+      return;
+    }
     const c = canonicalizeTypeColor(item.type, item.color);
     item.type = c.type; item.color = c.color;
     const invQty = Number(item.invoiceQty)||0;
@@ -1966,7 +2031,7 @@ const FIELD_CONFIGS = {
     {name:'qty', label:'الكمية المستلمة', type:'number', min:'1', required:true},
     {name:'unit', label:'الوحدة', type:'select', options:UNITS},
     {name:'invoiceQty', label:'الكمية حسب الفاتورة', type:'number', min:'1'},
-    {name:'unitPrice', label:'سعر الوحدة قبل الضريبة (ريال)', type:'number', min:'0', step:'0.01'},
+    {name:'unitPrice', label:'سعر الوحدة قبل الضريبة (ريال)', type:'number', min:'0.01', step:'0.01', required:true},
     {name:'freightPerUnit', label:'شحن/جمارك للوحدة (ريال)', type:'number', min:'0', step:'0.01'},
     {name:'vatMode', label:'طريقة تسعير المورد', type:'select', options:[
       {value:'excl', label:'قبل الضريبة (تُضاف 15%)'}, {value:'incl', label:'شامل الضريبة بالفعل'}, {value:'none', label:'مورد أجنبي (بدون ضريبة)'}
@@ -2028,7 +2093,15 @@ function editRecord(kind, id){
   document.getElementById('edit-modal-title').textContent = titles[kind];
   const form = document.getElementById('edit-form');
   form.innerHTML = `<div class="full" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">` +
-    FIELD_CONFIGS[kind].map(f => fieldHtml(f, rec[f.name])).join('') +
+    FIELD_CONFIGS[kind].map(f => {
+      if(kind === 'damaged' && f.name === 'supplier'){
+        const cur = cleanSpaces(rec.supplier);
+        const opts = supplierList();
+        if(cur && !opts.includes(cur)) opts.push(cur);
+        return fieldHtml({ ...f, type:'select', options:[{ value:'', label:'— بدون —' }, ...opts.map(s => ({ value:s, label:s }))] }, cur);
+      }
+      return fieldHtml(f, rec[f.name]);
+    }).join('') +
     `</div><div class="actions" style="margin-top:16px"><span></span><button type="submit" class="primary">حفظ التعديل</button></div>`;
   form.dataset.kind = kind;
   form.dataset.id = id;
@@ -2038,6 +2111,7 @@ function closeEditModal(){
   document.getElementById('edit-modal').style.display = 'none';
 }
 function openSettingsModal(){
+  document.getElementById('cleanup-card').style.display = isCleanupAdmin() ? 'block' : 'none';
   document.getElementById('settings-modal').style.display = 'flex';
 }
 function closeSettingsModal(){
@@ -2111,9 +2185,14 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     showToast('الكمية حسب الفاتورة لازم تكون أكبر من صفر أو فاضية', true); return;
   }
   if(kind==='inflow'){
+    if(!(Number(patch.unitPrice) > 0)){ showToast('سعر الوحدة مطلوب ولازم يكون أكبر من صفر', true); return; }
     const invQty = Number(patch.invoiceQty)||0;
     const gotQty = Number(patch.qty)||0;
     if(invQty <= gotQty) patch.shortageStatus = '';
+  }
+  if(kind === 'outflow' || kind === 'damaged'){
+    const problem = stockProblem(kind, patch, { kind, id });
+    if(problem){ showToast(problem, true); return; }
   }
   const btn = form.querySelector('button[type="submit"]');
   btn.disabled = true; btn.textContent = 'جاري الحفظ…';
@@ -2202,7 +2281,229 @@ async function deleteInvoiceGroup(key){
   }
 }
 
+// ================= (1) Stock check =================
+// Tolerant matching (spaces / hamza / ة / ى) so a spelling variant never causes a wrong rejection.
+function stockKey(type, color, unit){ return normalizeAr(type) + '|' + normalizeAr(color) + '|' + (unit || 'غصن'); }
+function stockBalance(type, color, unit, exclude){
+  const key = stockKey(type, color, unit);
+  const match = r => stockKey(r.type, r.color, r.unit) === key;
+  const skip = (kind, r) => !!exclude && exclude.kind === kind && exclude.id === r.id;
+  let bal = 0;
+  data.opening.forEach(r => { if(match(r) && !skip('opening', r)) bal += Number(r.qty) || 0; });
+  data.inflow.forEach(r => { if(match(r) && !skip('inflow', r)) bal += Number(r.qty) || 0; });
+  data.outflow.forEach(r => { if(match(r) && !skip('outflow', r)) bal -= Number(r.qty) || 0; });
+  // same rule as the balance table: damage "after exit" was already deducted when it left the main fridge
+  data.damaged.forEach(r => { if(r.damageSource !== 'after' && match(r) && !skip('damaged', r)) bal -= Number(r.qty) || 0; });
+  return bal;
+}
+// Returns a message when the movement is larger than the available stock, otherwise ''.
+function stockProblem(kind, rec, exclude){
+  if(kind === 'damaged' && rec.damageSource === 'after') return '';
+  if(!allLoaded()) return 'البيانات لسه ما تحمّلت كاملة — انتظر ثواني وحاول مرة ثانية';
+  const qty = Number(rec.qty) || 0;
+  const bal = stockBalance(rec.type, rec.color, rec.unit, exclude);
+  if(qty > bal){
+    return `الكمية أكبر من الرصيد — المتاح من "${itemLabel({ type:rec.type, color:rec.color })}" هو ${Math.max(bal, 0)} ${rec.unit || 'غصن'} بس`;
+  }
+  return '';
+}
+
+// ================= (5) Supplier dropdown (damaged) =================
+function cleanSpaces(s){ return String(s || '').trim().replace(/\s+/g, ' '); }
+function supplierList(){
+  const seen = new Set(), out = [];
+  data.inflow.forEach(r => {
+    const clean = cleanSpaces(r.supplier), k = normalizeAr(clean);
+    if(k && !seen.has(k)){ seen.add(k); out.push(clean); }
+  });
+  return out.sort((a,b) => a.localeCompare(b, 'ar'));
+}
+let supplierSig = '';
+function refreshSupplierSelect(){
+  const sel = document.getElementById('damaged-supplier');
+  if(!sel) return;
+  const list = supplierList();
+  const sig = list.join('\u0001');
+  if(sig === supplierSig) return;
+  supplierSig = sig;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— بدون —</option>' + list.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if(list.includes(cur)) sel.value = cur;
+}
+
+// ================= (4) Inventory count (جرد) =================
+function balanceRowsList(){
+  const map = {};
+  const bump = (r, sign) => {
+    const key = groupKey3(r.type, r.color, r.unit);
+    if(!map[key]) map[key] = { key, type:(r.type || '').trim(), color:(r.color || '').trim(), unit:r.unit || 'غصن', balance:0 };
+    map[key].balance += sign * (Number(r.qty) || 0);
+  };
+  data.opening.forEach(r => bump(r, 1));
+  data.inflow.forEach(r => bump(r, 1));
+  data.outflow.forEach(r => bump(r, -1));
+  data.damaged.filter(r => r.damageSource !== 'after').forEach(r => bump(r, -1));
+  return Object.values(map).sort((a,b) => a.type.localeCompare(b.type, 'ar') || a.color.localeCompare(b.color, 'ar'));
+}
+function countRowLabel(r){ return `${r.type}${r.color ? ' - ' + r.color : ''} (${r.unit})`; }
+function updateCountTexts(){
+  const sel = document.getElementById('count-item');
+  const row = balanceRowsList().find(r => r.key === sel.value);
+  const sys = document.getElementById('count-system'), diffEl = document.getElementById('count-diff');
+  if(!row){ sys.textContent = ''; diffEl.textContent = ''; return; }
+  sys.textContent = `الرصيد الحالي بالنظام: ${row.balance} ${row.unit}`;
+  const raw = document.getElementById('count-actual').value;
+  if(raw === ''){ diffEl.textContent = ''; return; }
+  const diff = Number(raw) - row.balance;
+  diffEl.textContent = diff === 0 ? 'مطابق للنظام — ما يتسجل شي'
+    : diff < 0 ? `النقص ${-diff} — يتسجل تالف بسبب "فرق جرد"`
+    : `الزيادة ${diff} — تتسجل تسوية بالزيادة بسبب "فرق جرد"`;
+}
+function openCountModal(){
+  const rows = balanceRowsList();
+  const sel = document.getElementById('count-item');
+  sel.innerHTML = rows.length
+    ? rows.map(r => `<option value="${esc(r.key)}">${esc(countRowLabel(r))}</option>`).join('')
+    : '<option value="">ما فيه أصناف بالرصيد</option>';
+  document.getElementById('count-actual').value = '';
+  updateCountTexts();
+  document.getElementById('count-modal').style.display = 'flex';
+}
+function closeCountModal(){ document.getElementById('count-modal').style.display = 'none'; }
+document.getElementById('count-item').addEventListener('change', updateCountTexts);
+document.getElementById('count-actual').addEventListener('input', updateCountTexts);
+document.getElementById('form-count').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if(!allLoaded()){ showToast('البيانات لسه ما تحمّلت كاملة — انتظر ثواني وحاول مرة ثانية', true); return; }
+  const row = balanceRowsList().find(r => r.key === document.getElementById('count-item').value);
+  const raw = document.getElementById('count-actual').value;
+  if(!row || raw === '' || !(Number(raw) >= 0)){ showToast('اختر الصنف واكتب العدد الفعلي', true); return; }
+  const diff = Number(raw) - row.balance;
+  if(diff === 0){ showToast('العدد الفعلي مطابق للنظام — ما تسجل شي'); closeCountModal(); return; }
+  const base = {
+    type: row.type, color: row.color, unit: row.unit, date: todayStr(),
+    addedBy: auth.currentUser ? auth.currentUser.email : '',
+    addedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+  try{
+    if(diff < 0){
+      await fsAdd(KEYS.damaged, { ...base, supplier:'', qty:-diff, damageSource:'before', reason:'فرق جرد', countAdjustment:true });
+      showToast(`تم تسجيل نقص ${-diff} كتالف (فرق جرد)`);
+    }else{
+      await fsAdd(KEYS.opening, { ...base, qty:diff, unitPrice:'', note:`فرق جرد (زيادة) — ${fmtDate(base.date)}`, reason:'فرق جرد', adjustment:true });
+      showToast(`تم تسجيل زيادة ${diff} (فرق جرد)`);
+    }
+    closeCountModal();
+  }catch(err){
+    showToast('تعذر الحفظ، حاول مرة ثانية', true);
+  }
+  btn.disabled = false; btn.textContent = 'حفظ الجرد';
+});
+
+// ================= (6) One-time names cleanup (admin only) =================
+const CLEANUP_ADMINS = ['algobiry2016@gmail.com', 'developmentdmflowers@gmail.com'];
+function isCleanupAdmin(){
+  const e = (auth.currentUser && auth.currentUser.email || '').toLowerCase();
+  return CLEANUP_ADMINS.includes(e);
+}
+// Same rule as new entries: trim, collapse spaces, strip hamza, apply aliases.
+function cleanTypeValue(v){ return canonicalizeTerm(String(v)); }
+function cleanColorValue(v){
+  return String(v).split(/[,،]/).map(x => x.trim()).filter(Boolean).map(x => canonicalizeTerm(x)).join('، ');
+}
+let cleanupPlan = null;
+function buildCleanupPlan(){
+  const groups = {};
+  const records = {};
+  const addGroup = (label, from, to, count) => {
+    const key = label + '|' + from;
+    if(!groups[key]) groups[key] = { label, from, to, count:0 };
+    groups[key].count += count;
+  };
+  ['inflow','outflow','damaged','opening'].forEach(kind => data[kind].forEach(r => {
+    const patch = {};
+    ['type','color'].forEach(f => {
+      if(typeof r[f] !== 'string' || r[f] === '') return;
+      const to = f === 'type' ? cleanTypeValue(r[f]) : cleanColorValue(r[f]);
+      if(to !== r[f]){ patch[f] = to; addGroup(f === 'type' ? 'صنف' : 'لون', r[f], to, 1); }
+    });
+    if(Object.keys(patch).length) records[kind + '/' + r.id] = { kind, id:r.id, patch };
+  }));
+  // suggestion lists (meta/catalog)
+  const cleanList = (arr, fn, label) => {
+    const out = [], seen = new Set();
+    (arr || []).forEach(x => {
+      const to = fn(x);
+      if(to !== x) addGroup(label, x, to, 1);
+      const k = normalizeAr(to);
+      if(k && !seen.has(k)){ seen.add(k); out.push(to); }
+    });
+    return out;
+  };
+  const newTypes = cleanList(data.types, cleanTypeValue, 'اقتراح (صنف)');
+  const newColors = cleanList(data.colors, cleanColorValue, 'اقتراح (لون)');
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  const catalog = (!same(newTypes, data.types || []) || !same(newColors, data.colors || [])) ? { types:newTypes, colors:newColors } : null;
+  // alias target names (meta/aliases)
+  const aliasUpdates = {};
+  Object.entries(data.aliases || {}).forEach(([k, v]) => {
+    if(typeof v !== 'string') return;
+    const to = stripHamzaDisplay(v);
+    if(to !== v){ aliasUpdates[k] = to; addGroup('اسم بديل', v, to, 1); }
+  });
+  return {
+    groups: Object.values(groups).sort((a,b) => a.label.localeCompare(b.label, 'ar') || a.from.localeCompare(b.from, 'ar')),
+    records: Object.values(records),
+    catalog,
+    aliasUpdates: Object.keys(aliasUpdates).length ? aliasUpdates : null
+  };
+}
+function openCleanupModal(){
+  if(!isCleanupAdmin()) return;
+  if(!allLoaded()){ showToast('البيانات لسه ما تحمّلت كاملة — انتظر ثواني وحاول مرة ثانية', true); return; }
+  cleanupPlan = buildCleanupPlan();
+  const body = document.getElementById('cleanup-body');
+  const confirmBtn = document.getElementById('cleanup-confirm');
+  const nothing = !cleanupPlan.groups.length;
+  document.getElementById('cleanup-summary').textContent = nothing
+    ? 'ما فيه أسماء تحتاج تنظيف ✅'
+    : `بيتحدّث ${cleanupPlan.records.length} سجل${cleanupPlan.catalog ? '، وقائمة الاقتراحات' : ''}${cleanupPlan.aliasUpdates ? '، والأسماء البديلة' : ''}. ما بيتحذف أي سجل. راجع الجدول وبعدها اضغط تأكيد.`;
+  body.innerHTML = cleanupPlan.groups.map(g => `<tr><td>${esc(g.label)}</td><td><span dir="auto" style="white-space:pre">"${esc(g.from)}"</span></td><td><span dir="auto" style="white-space:pre">"${esc(g.to)}"</span></td><td>${g.count}</td></tr>`).join('');
+  confirmBtn.style.display = nothing ? 'none' : 'inline-block';
+  confirmBtn.disabled = false; confirmBtn.textContent = 'تأكيد';
+  document.getElementById('cleanup-modal').style.display = 'flex';
+}
+function closeCleanupModal(){ document.getElementById('cleanup-modal').style.display = 'none'; }
+async function confirmCleanup(){
+  if(!isCleanupAdmin() || !cleanupPlan) return;
+  const plan = cleanupPlan;
+  const btn = document.getElementById('cleanup-confirm');
+  btn.disabled = true;
+  try{
+    for(let i = 0; i < plan.records.length; i += 400){
+      const slice = plan.records.slice(i, i + 400);
+      btn.textContent = `جاري التنظيف… ${Math.min(i + 400, plan.records.length)}/${plan.records.length}`;
+      await withRetry(async () => {
+        const batch = db.batch();
+        slice.forEach(u => batch.update(db.collection(KEYS[u.kind]).doc(u.id), u.patch)); // fields only, nothing deleted
+        await batch.commit();
+      });
+    }
+    if(plan.catalog) await withRetry(() => db.collection('meta').doc('catalog').update(plan.catalog));
+    if(plan.aliasUpdates) await withRetry(() => db.collection('meta').doc('aliases').set(plan.aliasUpdates, { merge:true }));
+    showToast(`تم التنظيف: ${plan.records.length} سجل`);
+    cleanupPlan = null;
+    closeCleanupModal();
+  }catch(err){
+    showToast('تعذر إكمال التنظيف — ما انحذف شي، تقدر تعيد المحاولة', true);
+    btn.disabled = false; btn.textContent = 'تأكيد';
+  }
+}
+
 function renderAll(){
+  refreshCatalogLists(); refreshSupplierSelect();
   renderTable('inflow'); renderTable('outflow'); renderTable('damaged');
   renderShortage(); renderOpening(); renderBalance();
   renderReport();
