@@ -1155,7 +1155,7 @@ function renderDamageReasons(rows){
     <div style="padding:12px 18px 6px;font-weight:700;font-size:13.5px">أسباب التلف بالفترة المعروضة</div>
     <div class="table-scroll"><table>
       <thead><tr><th>السبب</th><th>الوحدة</th><th>الكمية</th><th>النسبة</th><th>عدد السجلات</th><th>منها بعد الخروج</th>${admin ? '<th>التكلفة التقديرية</th>' : ''}</tr></thead>
-      <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(0)+' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
+      <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(2)+' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
     </table></div>
     <div style="border-bottom:1px solid var(--line)"></div>`;
 }
@@ -1365,10 +1365,10 @@ function renderBalance(){
       <td>${esc(r.type)}</td><td>${esc(r.color)}</td><td>${esc(r.unit)}</td><td>${r.opening}</td><td>${r.in}</td><td>${r.out}</td><td>${r.damaged}</td>
       <td><strong>${balance}</strong>${low?'<span class="badge-low">منخفض</span>':''}</td>
       <td>${avg ? avg.toFixed(2)+' ر.س' : '—'}</td>
-      <td>${value!==null ? value.toFixed(0)+' ر.س' : '—'}</td>
+      <td>${value!==null ? value.toFixed(2)+' ر.س' : '—'}</td>
     </tr>`;
   }).join('');
-  document.getElementById('kpi-inventory-value').textContent = totalValue.toFixed(0) + ' ر.س';
+  document.getElementById('kpi-inventory-value').textContent = totalValue.toFixed(2) + ' ر.س';
   renderLowStockBanner(lowRows);
 }
 
@@ -1450,7 +1450,7 @@ function renderCostRankList(elId, list){
     <li class="rank-row">
       <span class="rank-num damaged">${i+1}</span>
       <div class="rank-body">
-        <div class="rank-top"><span class="name">${esc(r.type)}</span><span class="val">${r.cost.toFixed(0)} ر.س</span></div>
+        <div class="rank-top"><span class="name">${esc(r.type)}</span><span class="val">${r.cost.toFixed(2)} ر.س</span></div>
         <div class="rank-bar-bg"><div class="rank-bar damaged" style="width:${Math.max(6,(r.cost/max)*100)}%"></div></div>
       </div>
     </li>`).join('');
@@ -1599,7 +1599,7 @@ function fillTable(prefix, rows, rowFn, word){
 function reasonsTableHtml(list, admin){
   return `<div class="table-scroll"><table>
     <thead><tr><th>السبب</th><th>الوحدة</th><th>الكمية</th><th>النسبة</th><th>عدد السجلات</th><th>منها بعد الخروج</th>${admin ? '<th>التكلفة التقديرية</th>' : ''}</tr></thead>
-    <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
+    <tbody>${list.map(g => `<tr><td>${esc(g.reason)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.pct.toFixed(0)}%</td><td>${g.count}</td><td>${g.after || '—'}</td>${admin ? `<td>${g.cost ? g.cost.toFixed(2) + ' ر.س' : '—'}</td>` : ''}</tr>`).join('')}</tbody>
   </table></div>`;
 }
 let destDetailName = null;
@@ -1633,18 +1633,18 @@ function renderReport(){
   // KPIs (quantities shown per unit)
   const k = reportKpis(rd, false);
   const setKpi = (id, txt) => { const el = document.getElementById(id); el.textContent = txt; el.className = 'v' + (txt.includes(' · ') ? ' sm' : ''); };
-  setKpi('rp-k-purchases', k.purchases.toFixed(0) + ' ر.س');
+  setKpi('rp-k-purchases', k.purchases.toFixed(2) + ' ر.س');
   setKpi('rp-k-in', k.inTxt);
   setKpi('rp-k-out', k.outTxt);
   setKpi('rp-k-damaged', k.dmTxt);
   setKpi('rp-k-waste', k.wasteTxt);
-  setKpi('rp-k-wastecost', k.wasteCost.toFixed(0) + ' ر.س');
+  setKpi('rp-k-wastecost', k.wasteCost.toFixed(2) + ' ر.س');
   setKpi('rp-k-postexit', k.postTxt);
 
   // Summary view
   renderRankList('rp-top-consumed', aggByTypeUnit(rd.outflow), '');
   renderRankList('rp-top-damaged', aggByTypeUnit(rd.damaged), 'damaged');
-  fillTable('rp-items', aggItems(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.in}</td><td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td><td>${g.out}</td><td>${g.damaged}</td></tr>`, 'صنف');
+  fillTable('rp-items', aggItems(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.in}</td><td>${g.cost ? g.cost.toFixed(2) + ' ر.س' : '—'}</td><td>${g.out}</td><td>${g.damaged}</td></tr>`, 'صنف');
 
   // Consumption view
   fillTable('rp-dest', getOutflowByDestination(rd.outflow), g => `<tr class="click-row" onclick="toggleDestDetail('${esc(g.destination)}')"><td>${esc(g.destination)} 🔎</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td></tr>`, 'وجهة');
@@ -1657,11 +1657,11 @@ function renderReport(){
     ? reasonsTableHtml(groupDamageReasons(rd.damaged, admin), admin)
     : '<div class="empty">ما فيه تالف بهذي الفترة</div>';
   renderCostRankList('rp-top-damaged-cost', aggDamagedCost(rd.damaged));
-  fillTable('rp-dmg', aggDamagedItems(rd), g => `<tr><td>${esc(g.label)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.after || '—'}</td><td>${g.cost ? g.cost.toFixed(0) + ' ر.س' : '—'}</td></tr>`, 'صنف');
+  fillTable('rp-dmg', aggDamagedItems(rd), g => `<tr><td>${esc(g.label)}</td><td>${esc(g.unit)}</td><td><strong>${g.qty}</strong></td><td>${g.after || '—'}</td><td>${g.cost ? g.cost.toFixed(2) + ' ر.س' : '—'}</td></tr>`, 'صنف');
 
   // Purchases view
-  fillTable('rp-buy', aggPurchasesByItem(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.qty}</td><td><strong>${g.cost.toFixed(0)} ر.س</strong></td><td>${g.avg ? g.avg.toFixed(2) + ' ر.س' : '—'}</td></tr>`, 'صنف');
-  fillTable('rp-sup', aggPurchasesBySupplier(rd), g => `<tr><td>${esc(g.supplier)}</td><td>${g.invoiceCount}</td><td>${g.lines}</td><td><strong>${g.cost.toFixed(0)} ر.س</strong></td><td>${g.pct.toFixed(0)}%</td></tr>`, 'مورد');
+  fillTable('rp-buy', aggPurchasesByItem(rd), g => `<tr><td>${esc(g.type)}</td><td>${esc(g.color)}</td><td>${esc(g.unit)}</td><td>${g.qty}</td><td><strong>${g.cost.toFixed(2)} ر.س</strong></td><td>${g.avg ? g.avg.toFixed(2) + ' ر.س' : '—'}</td></tr>`, 'صنف');
+  fillTable('rp-sup', aggPurchasesBySupplier(rd), g => `<tr><td>${esc(g.supplier)}</td><td>${g.invoiceCount}</td><td>${g.lines}</td><td><strong>${g.cost.toFixed(2)} ر.س</strong></td><td>${g.pct.toFixed(0)}%</td></tr>`, 'مورد');
 
   // Movements view (newest first, capped on screen; Excel has everything)
   const moves = reportMoves(rd).sort((a,b) => (b.r.date || '').localeCompare(a.r.date || '') || a.kind.localeCompare(b.kind, 'ar'));
@@ -2248,7 +2248,7 @@ function renderInvoiceGroups(){
   empty.style.display='none';
   body.innerHTML = groups.map(g=>`<tr>
     <td>${fmtDate(g.date)}</td><td>${esc(g.supplier)}</td><td>${esc(g.invoiceNo||'—')}</td><td>${esc(g.origin)}</td>
-    <td>${g.items.length}</td><td>${g.totalQty}</td><td><strong>${g.totalValue.toFixed(0)} ر.س</strong></td>
+    <td>${g.items.length}</td><td>${g.totalQty}</td><td><strong>${g.totalValue.toFixed(2)} ر.س</strong></td>
     <td>
       <button class="edit-link" onclick="editInvoiceGroup('${esc(g.invoiceNo)}')">تعديل</button>
       <button class="del" onclick="deleteInvoiceGroup('${esc(g.key)}')">حذف الفاتورة كاملة</button>
