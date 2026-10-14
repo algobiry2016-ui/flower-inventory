@@ -333,7 +333,7 @@
       <p class="hint">حدد "مصدر التلف" صح: لو الورد تلف وهو لسه بالثلاجة الرئيسية اختر الخيار الأول (يخصم من الرصيد). لو تلف بعد ما عبده طلّعه للثلاجة الصغيرة أو بعد التحضير، اختر الخيار الثاني — هذا الورد أصلاً انخصم من الرصيد وقت "الخروج"، فما يُخصم مرة ثانية، بس يتسجل كخسارة للمتابعة.</p>
       <form id="form-damaged">
         <div><label>التاريخ</label><input type="date" name="date" required></div>
-        <div><label>المورد <span class="opt">(اختياري)</span></label><select name="supplier" id="damaged-supplier"><option value="">— بدون —</option></select></div>
+        <div><label>المورد <span class="opt">(اختياري)</span></label><input type="text" name="supplier" id="damaged-supplier" list="supplierNames" placeholder="اختر من القائمة أو اكتب اسم المورد"><datalist id="supplierNames"></datalist></div>
         <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
         <div><label>اللون <span class="opt">(اختياري)</span></label><input type="text" name="color" list="flowerColors"></div>
         <div><label>الكمية</label><input type="number" name="qty" min="1" required></div>
@@ -1223,6 +1223,7 @@ function wireForm(kind){
       const c = canonicalizeTypeColor(record.type, record.color);
       record.type = c.type; record.color = c.color;
     }
+    if(record.supplier !== undefined) record.supplier = canonicalSupplier(record.supplier);
     if(kind === 'outflow' || kind === 'damaged'){
       const problem = stockProblem(kind, record);
       if(problem){ showToast(problem, true); return; }
@@ -2062,7 +2063,7 @@ const FIELD_CONFIGS = {
   ],
   damaged: [
     {name:'date', label:'التاريخ', type:'date', required:true},
-    {name:'supplier', label:'المورد', type:'text'},
+    {name:'supplier', label:'المورد', type:'text', list:'supplierNames'},
     {name:'type', label:'نوع الورد', type:'text', list:'flowerTypes', required:true},
     {name:'color', label:'اللون', type:'text', list:'flowerColors'},
     {name:'qty', label:'الكمية', type:'number', min:'1', required:true},
@@ -2105,12 +2106,6 @@ function editRecord(kind, id){
   const form = document.getElementById('edit-form');
   form.innerHTML = `<div class="full" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">` +
     FIELD_CONFIGS[kind].map(f => {
-      if(kind === 'damaged' && f.name === 'supplier'){
-        const cur = cleanSpaces(rec.supplier);
-        const opts = supplierList();
-        if(cur && !opts.includes(cur)) opts.push(cur);
-        return fieldHtml({ ...f, type:'select', options:[{ value:'', label:'— بدون —' }, ...opts.map(s => ({ value:s, label:s }))] }, cur);
-      }
       return fieldHtml(f, rec[f.name]);
     }).join('') +
     `</div><div class="actions" style="margin-top:16px"><span></span><button type="submit" class="primary">حفظ التعديل</button></div>`;
@@ -2186,6 +2181,7 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     const c = canonicalizeTypeColor(patch.type, patch.color);
     patch.type = c.type; patch.color = c.color;
   }
+  if(kind === 'damaged' && patch.supplier !== undefined) patch.supplier = canonicalSupplier(patch.supplier);
   if(Number(patch.qty) <= 0 || isNaN(Number(patch.qty))){
     showToast('الكمية لازم تكون رقم أكبر من صفر', true); return;
   }
@@ -2364,11 +2360,12 @@ function stockProblem(kind, rec, exclude){
   return '';
 }
 
-// ================= (5) Supplier dropdown (damaged) =================
+// ================= (5) Supplier suggestions (damaged) =================
+// Free text, so a damaged batch can be tagged before its invoice is entered (e.g. a Kenya shipment).
 function cleanSpaces(s){ return String(s || '').trim().replace(/\s+/g, ' '); }
 function supplierList(){
   const seen = new Set(), out = [];
-  data.inflow.forEach(r => {
+  [...data.inflow, ...data.damaged].forEach(r => {
     const clean = cleanSpaces(r.supplier), k = normalizeAr(clean);
     if(k && !seen.has(k)){ seen.add(k); out.push(clean); }
   });
@@ -2376,15 +2373,19 @@ function supplierList(){
 }
 let supplierSig = '';
 function refreshSupplierSelect(){
-  const sel = document.getElementById('damaged-supplier');
-  if(!sel) return;
+  const dl = document.getElementById('supplierNames');
+  if(!dl) return;
   const list = supplierList();
   const sig = list.join('\u0001');
   if(sig === supplierSig) return;
   supplierSig = sig;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— بدون —</option>' + list.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-  if(list.includes(cur)) sel.value = cur;
+  dl.innerHTML = list.map(s => `<option value="${esc(s)}">`).join('');
+}
+// Reuse the existing spelling when the typed name matches a known supplier (hamza/spacing variants).
+function canonicalSupplier(s){
+  const clean = cleanSpaces(s), k = normalizeAr(clean);
+  if(!k) return '';
+  return supplierList().find(x => normalizeAr(x) === k) || clean;
 }
 
 // ================= (4) Inventory count (جرد) =================
