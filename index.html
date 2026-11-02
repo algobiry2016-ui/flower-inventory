@@ -678,6 +678,9 @@
       <h2>تنظيف الأسماء (مؤقت)</h2>
       <p class="hint">يوحّد أسماء الأصناف والألوان بالسجلات القديمة (مسافات زايدة، همزة). يعرض لك كل تغيير قبل ما ينفّذ، ولا يمسح أي سجل.</p>
       <button type="button" class="primary" onclick="openCleanupModal()">تنظيف الأسماء</button>
+      <h2 style="margin-top:18px">توحيد الوحدات</h2>
+      <p class="hint">يعرض الأصناف اللي انسجلت بأكثر من وحدة (مثل ربطة وغصن). تختار الوحدة الصحيحة للصنف وكم تساوي الوحدة الثانية منها، والنظام يحوّل الكميات والأسعار. يعرض لك التغيير قبل ما ينفّذ، ولا يمسح أي سجل. الأفضل تسوي "تنظيف الأسماء" قبله.</p>
+      <button type="button" class="primary" onclick="openUnitFixModal()">توحيد الوحدات</button>
     </div>
   </div>
 </div>
@@ -692,6 +695,18 @@
       <div class="full"><div class="hint" id="count-diff" style="margin:0"></div></div>
       <div class="actions"><span></span><button type="submit" class="primary">حفظ الجرد</button></div>
     </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="unitfix-modal">
+  <div class="modal-card" style="max-width:860px">
+    <div class="modal-head"><h3>توحيد الوحدات</h3><button class="modal-close" onclick="closeUnitFixModal()">✕</button></div>
+    <div class="hint" id="unitfix-summary" style="margin:0 0 12px"></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>الصنف</th><th>المسجّل حالياً</th><th>الوحدة الصحيحة</th><th>التحويل</th><th></th></tr></thead>
+      <tbody id="unitfix-body"></tbody>
+    </table></div>
+    <div class="actions" style="margin-top:16px"><span></span><button type="button" class="ghost" onclick="closeUnitFixModal()">إغلاق</button></div>
   </div>
 </div>
 
@@ -738,7 +753,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const KEYS = { inflow:'inflow', outflow:'outflow', damaged:'damaged', opening:'opening' };
-let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{}, thresholds:{ghusn:20,rabta:2,habba:2}, adminEmails:[] };
+let data = { inflow:[], outflow:[], damaged:[], opening:[], types:[], colors:[], alertPhone:'', aliases:{}, thresholds:{ghusn:20,rabta:2,habba:2}, adminEmails:[], typeUnits:{} };
 
 const DEFAULT_TYPES = ['رز هولندي','رز اكوادوري','توليب','اوركيد','ليليوم','جيبسوفيلا','بيوني','دوار الشمس'];
 const DEFAULT_COLORS = ['احمر','ابيض','وردي','اصفر','برتقالي','بنفسجي','مشكل'];
@@ -820,6 +835,7 @@ function attachListeners(){
   db.collection('meta').doc('settings').onSnapshot(doc=>{
     const s = doc.exists ? doc.data() : {};
     data.alertPhone = s.alertPhone || '';
+    data.typeUnits = s.typeUnits || {};
     const phoneInput = document.getElementById('wa-phone');
     if(phoneInput && document.activeElement !== phoneInput) phoneInput.value = data.alertPhone;
     const th = s.thresholds || {};
@@ -1224,6 +1240,7 @@ function wireForm(kind){
       record.type = c.type; record.color = c.color;
     }
     if(record.supplier !== undefined) record.supplier = canonicalSupplier(record.supplier);
+    if(!unitCheckPasses(record.type, record.unit)) return;
     if(kind === 'outflow' || kind === 'damaged'){
       const problem = stockProblem(kind, record);
       if(problem){ showToast(problem, true); return; }
@@ -1943,6 +1960,19 @@ function wireInvoiceFlow(){
     }
     const c = canonicalizeTypeColor(item.type, item.color);
     item.type = c.type; item.color = c.color;
+    if(unitProblem(item.type, item.unit) && !(isAdmin() && confirm(unitProblem(item.type, item.unit) + '\n\nأنت من الإدارة: تبي تحفظه بالوحدة المختارة بدون تحويل؟ (إلغاء = تحويل الكمية)'))){
+      const want = typeUnitInfo(item.type).unit;
+      const ans = prompt(`"${item.type}" وحدته بالمخزون ${want}، والفاتورة جاية بال${item.unit}.\nكم ${want} في ال${item.unit} الوحدة؟ (النظام يحوّل الكمية والسعر)\nاتركه فاضي للإلغاء.`);
+      if(ans === null || ans.trim() === '') return;
+      const f = Number(ans.replace(',', '.'));
+      if(!(f > 0)){ showToast('اكتب رقم أكبر من صفر', true); return; }
+      const note = `الفاتورة: ${item.qty} ${item.unit} × ${f}`;
+      item.qty = String(round2(Number(item.qty) * f));
+      if(Number(item.invoiceQty)) item.invoiceQty = String(round2(Number(item.invoiceQty) * f));
+      item.unitPrice = String(Number((Number(item.unitPrice) / f).toFixed(4)));
+      item.unit = want;
+      item.notes = item.notes ? `${item.notes} — ${note}` : note;
+    }
     const invQty = Number(item.invoiceQty)||0;
     const gotQty = Number(item.qty)||0;
     item.shortageStatus = (invQty > gotQty) ? SHORTAGE_STATUSES[0] : '';
@@ -2182,6 +2212,8 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     patch.type = c.type; patch.color = c.color;
   }
   if(kind === 'damaged' && patch.supplier !== undefined) patch.supplier = canonicalSupplier(patch.supplier);
+  const orig = data[kind].find(r => r.id === id) || {};
+  if((patch.unit !== orig.unit || typeKey(patch.type) !== typeKey(orig.type)) && !unitCheckPasses(patch.type, patch.unit)) return;
   if(Number(patch.qty) <= 0 || isNaN(Number(patch.qty))){
     showToast('الكمية لازم تكون رقم أكبر من صفر', true); return;
   }
@@ -2358,6 +2390,137 @@ function stockProblem(kind, rec, exclude){
       + (hints.length ? ` — لكن فيه رصيد كافي بـ: ${hints.join('، ')} (تأكد من الوحدة واللون)` : '');
   }
   return '';
+}
+
+// ================= (7) One unit per flower type =================
+// The unit of a type is the one set by management (meta/settings.typeUnits), else the only unit it
+// was ever recorded in. A type already recorded in several units is not enforced until it's fixed.
+function typeKey(type){ return normalizeAr(canonicalizeTerm(String(type || ''))); }
+let unitIndexCache = null;
+function unitIndex(){
+  if(unitIndexCache) return unitIndexCache;
+  const idx = {};
+  ['inflow','outflow','damaged','opening'].forEach(kind => data[kind].forEach(r => {
+    const k = typeKey(r.type); if(!k) return;
+    const u = r.unit || 'غصن';
+    if(!idx[k]) idx[k] = { names:{}, units:{} };
+    idx[k].names[cleanTypeValue(r.type)] = (idx[k].names[cleanTypeValue(r.type)] || 0) + 1;
+    if(!idx[k].units[u]) idx[k].units[u] = { records:0, byKind:{} };
+    idx[k].units[u].records++;
+    idx[k].units[u].byKind[kind] = (idx[k].units[u].byKind[kind] || 0) + (Number(r.qty) || 0);
+  }));
+  return unitIndexCache = idx;
+}
+function typeUnitInfo(type){
+  const k = typeKey(type); if(!k) return null;
+  const set = data.typeUnits && data.typeUnits[k];
+  if(set) return { unit:set, strict:true };
+  const e = unitIndex()[k]; if(!e) return null;
+  const units = Object.entries(e.units).sort((a,b) => b[1].records - a[1].records);
+  return { unit:units[0][0], strict: units.length === 1 };
+}
+function unitProblem(type, unit){
+  const info = typeUnitInfo(type);
+  if(!info || !info.strict || (unit || 'غصن') === info.unit) return '';
+  return `"${cleanTypeValue(type)}" وحدته ${info.unit} — سجّل الكمية بال${info.unit}. لو الوحدة نفسها غلط كلّم الإدارة.`;
+}
+// Admin may override after a confirm; everyone else is stopped. Returns true when OK to save.
+function unitCheckPasses(type, unit){
+  const msg = unitProblem(type, unit);
+  if(!msg) return true;
+  if(isAdmin()) return confirm(msg + '\n\nأنت من الإدارة: تبي تحفظ بوحدة مختلفة على كل حال؟');
+  showToast(msg, true);
+  return false;
+}
+// Auto-pick the type's unit as soon as the type is chosen (all forms, including the edit modal).
+document.addEventListener('change', e => {
+  const t = e.target;
+  if(!t || t.name !== 'type' || !t.form) return;
+  const sel = t.form.querySelector('select[name="unit"]');
+  const info = typeUnitInfo(t.value);
+  if(sel && info) sel.value = info.unit;
+});
+
+let unitFixRows = [];
+function openUnitFixModal(){
+  if(!isCleanupAdmin()) return;
+  if(!allLoaded()){ showToast('البيانات لسه ما تحمّلت كاملة — انتظر ثواني وحاول مرة ثانية', true); return; }
+  unitIndexCache = null;
+  const idx = unitIndex();
+  const kindAr = { inflow:'دخول', outflow:'خروج', damaged:'تالف', opening:'افتتاحي' };
+  unitFixRows = Object.entries(idx).filter(([k, e]) => Object.keys(e.units).length > 1).map(([k, e]) => {
+    const name = Object.entries(e.names).sort((a,b) => b[1] - a[1])[0][0];
+    const units = Object.entries(e.units).sort((a,b) => b[1].records - a[1].records);
+    return { key:k, name, units, target: (data.typeUnits && data.typeUnits[k]) || units[0][0] };
+  }).sort((a,b) => a.name.localeCompare(b.name, 'ar'));
+  document.getElementById('unitfix-summary').textContent = unitFixRows.length
+    ? `${unitFixRows.length} صنف مسجّل بأكثر من وحدة. لكل صنف: اختر الوحدة الصحيحة، واكتب كم تساوي كل وحدة ثانية منها (مثلاً 1 ربطة = 10 غصن)، واضغط "تطبيق".`
+    : 'كل الأصناف مسجّلة بوحدة وحدة ✅';
+  document.getElementById('unitfix-body').innerHTML = unitFixRows.map((r, i) => `<tr id="uf-row-${i}">
+    <td><strong>${esc(r.name)}</strong></td>
+    <td>${r.units.map(([u, x]) => `<div><strong>${esc(u)}</strong>: ${x.records} سجل <span class="opt">(${Object.entries(x.byKind).map(([k, q]) => `${kindAr[k]} ${q}`).join('، ')})</span></div>`).join('')}</td>
+    <td><select id="uf-target-${i}" onchange="renderUnitFixFactors(${i})">${UNITS.map(u => `<option ${u === r.target ? 'selected' : ''}>${u}</option>`).join('')}</select></td>
+    <td id="uf-factors-${i}"></td>
+    <td><button type="button" class="primary sm" onclick="applyUnitFix(${i})">تطبيق</button></td>
+  </tr>`).join('');
+  unitFixRows.forEach((r, i) => renderUnitFixFactors(i));
+  document.getElementById('unitfix-modal').style.display = 'flex';
+}
+function closeUnitFixModal(){ document.getElementById('unitfix-modal').style.display = 'none'; }
+function renderUnitFixFactors(i){
+  const r = unitFixRows[i];
+  const target = document.getElementById(`uf-target-${i}`).value;
+  document.getElementById(`uf-factors-${i}`).innerHTML = r.units.filter(([u]) => u !== target).map(([u]) =>
+    `<div style="white-space:nowrap">1 ${esc(u)} = <input type="number" min="0.01" step="0.01" id="uf-f-${i}-${UNITS.indexOf(u)}" style="width:70px;padding:4px 6px"> ${esc(target)}</div>`
+  ).join('');
+}
+async function applyUnitFix(i){
+  if(!isCleanupAdmin()) return;
+  const r = unitFixRows[i];
+  const target = document.getElementById(`uf-target-${i}`).value;
+  const factors = {};
+  for(const [u] of r.units){
+    if(u === target) continue;
+    const f = Number(document.getElementById(`uf-f-${i}-${UNITS.indexOf(u)}`).value);
+    if(!(f > 0)){ showToast(`اكتب كم يساوي 1 ${u} من ال${target}`, true); return; }
+    factors[u] = f;
+  }
+  const by = auth.currentUser ? auth.currentUser.email : '';
+  const updates = [];
+  let fractional = 0;
+  ['inflow','outflow','damaged','opening'].forEach(kind => data[kind].forEach(rec => {
+    const u = rec.unit || 'غصن';
+    if(typeKey(rec.type) !== r.key || u === target) return;
+    const f = factors[u];
+    const old = { unit:u, qty:rec.qty, factor:f, by, at:todayStr() };
+    const patch = { unit:target, qty: round2((Number(rec.qty) || 0) * f) };
+    if(!Number.isInteger(patch.qty)) fractional++;
+    if(Number(rec.invoiceQty)){ old.invoiceQty = rec.invoiceQty; patch.invoiceQty = round2(Number(rec.invoiceQty) * f); }
+    if(Number(rec.unitPrice)){ old.unitPrice = rec.unitPrice; patch.unitPrice = Number((Number(rec.unitPrice) / f).toFixed(4)); }
+    if(Number(rec.freightPerUnit)){ old.freightPerUnit = rec.freightPerUnit; patch.freightPerUnit = Number((Number(rec.freightPerUnit) / f).toFixed(4)); }
+    patch.unitFix = old; // original values kept on the record, so the change can be traced or undone
+    updates.push({ kind, id:rec.id, patch });
+  }));
+  const lines = Object.entries(factors).map(([u, f]) => `1 ${u} = ${f} ${target}`).join('، ');
+  const ok = confirm(`"${r.name}": بيتحوّل ${updates.length} سجل إلى ${target} (${lines}).\n`
+    + `الكميات تنضرب بالرقم، وسعر الوحدة ينقسم عليه، فإجمالي قيمة الفاتورة ما يتغير.`
+    + (fractional ? `\n\nتنبيه: ${fractional} سجل بيطلع كميته بكسور — الأفضل تختار الوحدة الأصغر.` : '')
+    + `\n\nمتأكد؟`);
+  if(!ok) return;
+  try{
+    for(let j = 0; j < updates.length; j += 400){
+      await withRetry(async () => {
+        const batch = db.batch();
+        updates.slice(j, j + 400).forEach(u => batch.update(db.collection(KEYS[u.kind]).doc(u.id), u.patch)); // fields only, nothing deleted
+        await batch.commit();
+      });
+    }
+    await withRetry(() => db.collection('meta').doc('settings').set({ typeUnits: { [r.key]: target } }, { merge:true }));
+    showToast(`تم توحيد "${r.name}" على ${target}: ${updates.length} سجل`);
+    const row = document.getElementById(`uf-row-${i}`); if(row) row.style.display = 'none';
+  }catch(err){
+    showToast('تعذر إكمال التوحيد، تأكد من الاتصال وحاول مرة ثانية', true);
+  }
 }
 
 // ================= (5) Supplier suggestions (damaged) =================
@@ -2560,6 +2723,7 @@ async function confirmCleanup(){
 }
 
 function renderAll(){
+  unitIndexCache = null;
   refreshCatalogLists(); refreshSupplierSelect();
   renderTable('inflow'); renderTable('outflow'); renderTable('damaged');
   renderShortage(); renderOpening(); renderBalance();
