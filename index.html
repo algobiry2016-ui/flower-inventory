@@ -27,6 +27,7 @@
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px 60px;}
   .band{background:var(--leaf);color:#fff;padding:26px 0 22px;}
   .band .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .band-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-width:0;}
   .brandmark{font-size:12px;letter-spacing:.04em;color:#cfe0d3;font-weight:500;}
   .band h1{margin:2px 0 0;font-size:22px;font-weight:800;}
   .band .sub{font-size:13px;color:#bcd2c1;margin-top:4px;}
@@ -151,6 +152,19 @@
   .stock-alert .wa-btn:hover{background:#1fb959;}
   .wa-settings{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .wa-settings input{max-width:220px;}
+  @media(max-width:640px){
+    .band-actions{gap:8px;}
+    .user-badge{flex-wrap:wrap;}
+    .modal-overlay{padding:10px;}
+    .modal-card{padding:16px;max-height:92vh;}
+    .modal-card form{grid-template-columns:1fr !important;}
+    .modal-card .card{padding:14px;}
+    form[style*="grid-template-columns"]{grid-template-columns:1fr 1fr !important;}
+    .modal-card form[style*="grid-template-columns"]{grid-template-columns:1fr !important;}
+    #unitfix-modal thead{display:none;}
+    #unitfix-modal tr{display:block;padding:10px 0;border-bottom:1px solid var(--line);}
+    #unitfix-modal td{display:block;border:none;padding:4px 0;}
+  }
 </style>
 </head>
 <body>
@@ -177,7 +191,7 @@
       <h1>مخزون ثلاجة الورد</h1>
       <div class="sub">سجل مشترك — دخول، خروج، تالف، نواقص، الرصيد، والتقارير</div>
     </div>
-    <div style="display:flex;align-items:center;gap:14px">
+    <div class="band-actions">
       <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">جاري التحميل…</span></div>
       <div class="user-badge"><span id="user-email"></span><button onclick="openSettingsModal()">⚙ الإعدادات</button><button onclick="openPasswordModal()">🔑 كلمة المرور</button><button id="logout-btn">تسجيل خروج</button></div>
     </div>
