@@ -588,10 +588,15 @@
   <!-- INVOICES (log visible to everyone, read-only for non-admins; price comparison admin-only) -->
   <div class="panel" id="panel-invoices">
     <div class="table-card">
-      <div class="table-head"><h3>سجل الفواتير</h3><span class="count" id="invoice-log-count"></span></div>
+      <div class="table-head"><h3>سجل الفواتير</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="invoice-search" placeholder="ابحث برقم الفاتورة أو المورد" style="width:200px;padding:6px 10px;font-size:12.5px">
+          <span class="count" id="invoice-log-count"></span>
+        </div>
+      </div>
       <div id="period-bar-invoices"></div>
       <div class="kpis" id="invoice-kpis" style="padding:12px 18px 0">
-        <div class="kpi"><div class="v" id="inv-k-total">0.00 ر.س</div><div class="l">إجمالي المشتريات للفترة</div></div>
+        <div class="kpi"><div class="v" id="inv-k-total">0.00 ر.س</div><div class="l" id="inv-k-total-label">إجمالي المشتريات للفترة</div></div>
         <div class="kpi"><div class="v" id="inv-k-count">0</div><div class="l">عدد الفواتير</div></div>
         <div class="kpi"><div class="v" id="inv-k-qty">0</div><div class="l">إجمالي الكمية</div></div>
       </div>
@@ -2306,14 +2311,27 @@ function getInvoiceGroups(){
   });
   return Object.values(map).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
 }
+// Search (invoice no. or supplier) looks through ALL periods, same as the inflow log search.
+let invoiceSearchTerm = '';
+function visibleInvoiceGroups(){
+  const term = normalizeAr(invoiceSearchTerm);
+  if(term){
+    const groups = getInvoiceGroups().filter(g => normalizeAr(g.invoiceNo).includes(term) || normalizeAr(g.supplier).includes(term));
+    return { groups, info:{ searching:true, period:null }, key:'search' };
+  }
+  const period = getPeriod('invoices');
+  return { groups: getInvoiceGroups().filter(g => period.test(g.date)), info:{ searching:false, period }, key: period.key, label: period.label };
+}
 function renderInvoiceGroups(){
   const body = document.getElementById('invoice-log-body');
   const empty = document.getElementById('invoice-log-empty');
   const count = document.getElementById('invoice-log-count');
   const admin = isAdmin();
-  const period = getPeriod('invoices');
-  const groups = getInvoiceGroups().filter(g => period.test(g.date));
-  syncPeriodBar('invoices', { searching:false, period });
+  const vis = visibleInvoiceGroups();
+  const groups = vis.groups;
+  syncPeriodBar('invoices', vis.info);
+  empty.textContent = vis.info.searching ? 'ما فيه فاتورة تطابق البحث' : 'ما فيه فواتير بهالفترة';
+  document.getElementById('inv-k-total-label').textContent = vis.info.searching ? 'إجمالي المشتريات لنتائج البحث' : 'إجمالي المشتريات للفترة';
   const totalValue = groups.reduce((t,g)=> t + g.totalValue, 0);
   const totalQty = groups.reduce((t,g)=> t + g.totalQty, 0);
   document.getElementById('inv-k-total').textContent = totalValue.toFixed(2) + ' ر.س';
@@ -2333,9 +2351,8 @@ function renderInvoiceGroups(){
 }
 function exportInvoices(lang){
   const en = lang === 'en';
-  const period = getPeriod('invoices');
-  const groups = getInvoiceGroups().filter(g => period.test(g.date))
-    .sort((a,b)=> (a.date||'').localeCompare(b.date||'')); // oldest first
+  const vis = visibleInvoiceGroups();
+  const groups = vis.groups.slice().sort((a,b)=> (a.date||'').localeCompare(b.date||'')); // oldest first
   if(!groups.length){ showToast('ما فيه فواتير بهالفترة', true); return; }
   const head = en
     ? ['Date','Supplier','Invoice No','Origin','Items','Total Qty','Total Value (SAR)']
@@ -2344,8 +2361,9 @@ function exportInvoices(lang){
   const totalQty = groups.reduce((t,g)=> t + g.totalQty, 0);
   const totalValue = groups.reduce((t,g)=> t + g.totalValue, 0);
   const foot = [en ? 'Total' : 'الإجمالي', '', `${groups.length} ${en ? 'invoices' : 'فاتورة'}`, '', '', totalQty, round2(totalValue)];
-  const aoa = [[en ? 'Period' : 'الفترة', en ? period.key : period.label], [], head, ...rows, foot];
-  downloadWorkbook([{ name: en ? 'Invoices' : 'الفواتير', aoa }], `invoices-${period.key}-${lang}.xlsx`, !en);
+  const periodCell = vis.info.searching ? (en ? `Search: ${invoiceSearchTerm}` : `بحث: ${invoiceSearchTerm}`) : (en ? vis.key : vis.label);
+  const aoa = [[en ? 'Period' : 'الفترة', periodCell], [], head, ...rows, foot];
+  downloadWorkbook([{ name: en ? 'Invoices' : 'الفواتير', aoa }], `invoices-${vis.key}-${lang}.xlsx`, !en);
   showToast('تم تصدير الملف');
 }
 function editInvoiceGroup(invoiceNo){
@@ -2856,6 +2874,10 @@ document.getElementById('inflow-search').addEventListener('input', (e) => {
 document.getElementById('outflow-search').addEventListener('input', (e) => {
   outflowSearchTerm = e.target.value.trim();
   renderTable('outflow');
+});
+document.getElementById('invoice-search').addEventListener('input', (e) => {
+  invoiceSearchTerm = e.target.value.trim();
+  renderInvoiceGroups();
 });
 document.getElementById('damaged-search').addEventListener('input', (e) => {
   damagedSearchTerm = e.target.value.trim();
