@@ -2061,15 +2061,38 @@ function renderPending(){
   const body = document.getElementById('pending-body');
   const count = document.getElementById('pending-count');
   const hint = document.getElementById('pending-hint');
+  saveInvoiceDraft();
   if(!pendingItems.length){ card.style.display = 'none'; return; }
   card.style.display = 'block';
   count.textContent = `${pendingItems.length} صنف`;
-  hint.textContent = `بعد ما تخلص كل أصناف الفاتورة، اضغط الزر لحفظها كلها مرة وحدة`;
+  hint.textContent = `محفوظة مؤقتاً على هذا الجهاز حتى لو طلعت من البرنامج — بعد ما تخلص كل أصناف الفاتورة، اضغط الزر لحفظها بالنظام`;
   body.innerHTML = pendingItems.map(it => `<tr>
     <td>${esc(it.type)}</td><td>${esc(it.color||'—')}</td><td>${it.qty}</td><td>${esc(it.unit||'غصن')}</td><td>${esc(it.condition)}</td>
     <td><button class="del" onclick="removePending(${it._tempId})">حذف</button></td>
   </tr>`).join('');
 }
+// ---- Invoice draft: items not yet saved survive closing the app (kept on this device only) ----
+const DRAFT_FIELDS = ['hdr-date','hdr-supplier','hdr-invoiceNo','hdr-origin','hdr-freight'];
+function draftKey(){ return 'inflow-draft:' + ((auth.currentUser && auth.currentUser.email) || ''); }
+function saveInvoiceDraft(){
+  try{
+    if(!pendingItems.length){ localStorage.removeItem(draftKey()); return; }
+    const header = {};
+    DRAFT_FIELDS.forEach(id => { const el = document.getElementById(id); if(el) header[id] = el.value; });
+    localStorage.setItem(draftKey(), JSON.stringify({ items: pendingItems, header, savedAt: Date.now() }));
+  }catch(e){}
+}
+function restoreInvoiceDraft(){
+  if(pendingItems.length) return;
+  let d = null;
+  try{ d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); }catch(e){}
+  if(!d || !Array.isArray(d.items) || !d.items.length) return;
+  pendingItems = d.items;
+  Object.entries(d.header || {}).forEach(([id, v]) => { const el = document.getElementById(id); if(el) el.value = v; });
+  renderPending();
+  showToast(`رجّعنا لك فاتورة ما انحفظت (${pendingItems.length} صنف) — كمّلها واضغط "حفظ الفاتورة كاملة"`);
+}
+DRAFT_FIELDS.forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', saveInvoiceDraft); });
 function removePending(tempId){
   pendingItems = pendingItems.filter(it => it._tempId !== tempId);
   renderPending();
@@ -2991,6 +3014,7 @@ auth.onAuthStateChanged(user => {
     document.getElementById('user-email').textContent = user.email;
     attachListeners();
     updateInvoicesTabVisibility();
+    restoreInvoiceDraft();
   }else{
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('app-content').style.display = 'none';
