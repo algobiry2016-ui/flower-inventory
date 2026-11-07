@@ -231,7 +231,7 @@
 
     <div class="card">
       <h2>إضافة صنف من هذه الفاتورة</h2>
-      <p class="hint">أضف كل صنف بزر "إضافة الصنف"، وبعد ما تخلص كل أصناف الفاتورة اضغط "حفظ الفاتورة كاملة" مرة وحدة تحت.</p>
+      <p class="hint">أضف كل صنف بزر "إضافة الصنف"، وبعد ما تخلص كل أصناف الفاتورة اضغط "📷 صوّر الفاتورة واحفظ" مرة وحدة تحت.</p>
       <form id="form-inflow-item">
         <div><label>نوع الورد</label><input type="text" name="type" list="flowerTypes" required></div>
         <div><label>اللون <span class="opt">(اتركه فاضي لو ما يحتاج)</span></label><input type="text" name="color" list="flowerColors" placeholder="مثال: أحمر"></div>
@@ -269,7 +269,11 @@
       </table></div>
       <div class="actions" style="padding:14px 18px">
         <span class="hint" id="pending-hint" style="margin:0"></span>
-        <button class="primary" id="save-invoice-btn" onclick="saveInvoice()">حفظ الفاتورة كاملة</button>
+        <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="ghost sm admin-only-inline" id="save-nophoto-btn" onclick="saveInvoice()" style="display:none">حفظ بدون صورة</button>
+          <button class="primary" id="save-invoice-btn" onclick="document.getElementById('invoice-photo-input').click()">📷 صوّر الفاتورة واحفظ</button>
+        </span>
+        <input type="file" id="invoice-photo-input" accept="image/*" capture="environment" style="display:none">
       </div>
     </div>
     <div class="table-card">
@@ -603,7 +607,7 @@
       <p class="hint admin-only" style="padding:10px 18px">كل فاتورة كسطر واحد (مجموع كل أصنافها) — "تعديل" يفتح لك بحث الفاتورة بتبويب "دخول الورد" لتعديل الحقول المشتركة دفعة وحدة، و"حذف الفاتورة كاملة" يمسح كل أصنافها مرة وحدة.</p>
       <p class="hint non-admin-only" style="padding:10px 18px">كل فاتورة كسطر واحد (مجموع كل أصنافها) — للاطلاع فقط.</p>
       <div class="table-scroll"><table>
-        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>عدد الأصناف</th><th>إجمالي الكمية</th><th>إجمالي القيمة</th><th class="admin-only"></th></tr></thead>
+        <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>بلد المنشأ</th><th>عدد الأصناف</th><th>إجمالي الكمية</th><th>إجمالي القيمة</th><th>الصورة</th><th class="admin-only"></th></tr></thead>
         <tbody id="invoice-log-body"></tbody>
       </table></div>
       <div class="empty" id="invoice-log-empty" style="display:none">ما فيه فواتير بهالفترة</div>
@@ -702,6 +706,13 @@
       <p class="hint">يعرض الأصناف اللي انسجلت بأكثر من وحدة (مثل ربطة وغصن). تختار الوحدة الصحيحة للصنف وكم تساوي الوحدة الثانية منها، والنظام يحوّل الكميات والأسعار. يعرض لك التغيير قبل ما ينفّذ، ولا يمسح أي سجل. الأفضل تسوي "تنظيف الأسماء" قبله.</p>
       <button type="button" class="primary" onclick="openUnitFixModal()">توحيد الوحدات</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="photo-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card" style="max-width:820px">
+    <div class="modal-head"><h3>صورة الفاتورة</h3><button class="modal-close" onclick="document.getElementById('photo-modal').style.display='none'">✕</button></div>
+    <img id="photo-modal-img" alt="صورة الفاتورة" style="width:100%;height:auto;border-radius:8px">
   </div>
 </div>
 
@@ -932,6 +943,7 @@ function updateInvoicesTabVisibility(){
   const invBtn = document.getElementById('invoices-tab-btn');
   const repBtn = document.getElementById('reports-tab-btn');
   invBtn.style.display = 'inline-block';
+  document.getElementById('save-nophoto-btn').style.display = admin ? '' : 'none';
   repBtn.style.display = admin ? 'inline-block' : 'none';
   document.querySelectorAll('#panel-invoices .admin-only').forEach(el => el.style.display = admin ? '' : 'none');
   document.querySelectorAll('#panel-invoices .non-admin-only').forEach(el => el.style.display = admin ? 'none' : '');
@@ -2065,7 +2077,7 @@ function renderPending(){
   if(!pendingItems.length){ card.style.display = 'none'; return; }
   card.style.display = 'block';
   count.textContent = `${pendingItems.length} صنف`;
-  hint.textContent = `محفوظة مؤقتاً على هذا الجهاز حتى لو طلعت من البرنامج — بعد ما تخلص كل أصناف الفاتورة، اضغط الزر لحفظها بالنظام`;
+  hint.textContent = `محفوظة مؤقتاً على هذا الجهاز حتى لو طلعت من البرنامج — بعد ما تخلص كل الأصناف صوّر الفاتورة، وتنحفظ بالنظام على طول`;
   body.innerHTML = pendingItems.map(it => `<tr>
     <td>${esc(it.type)}</td><td>${esc(it.color||'—')}</td><td>${it.qty}</td><td>${esc(it.unit||'غصن')}</td><td>${esc(it.condition)}</td>
     <td><button class="del" onclick="removePending(${it._tempId})">حذف</button></td>
@@ -2090,7 +2102,7 @@ function restoreInvoiceDraft(){
   pendingItems = d.items;
   Object.entries(d.header || {}).forEach(([id, v]) => { const el = document.getElementById(id); if(el) el.value = v; });
   renderPending();
-  showToast(`رجّعنا لك فاتورة ما انحفظت (${pendingItems.length} صنف) — كمّلها واضغط "حفظ الفاتورة كاملة"`);
+  showToast(`رجّعنا لك فاتورة ما انحفظت (${pendingItems.length} صنف) — كمّلها وصوّر الفاتورة عشان تنحفظ`);
 }
 DRAFT_FIELDS.forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', saveInvoiceDraft); });
 function removePending(tempId){
@@ -2098,8 +2110,9 @@ function removePending(tempId){
   renderPending();
 }
 
-async function saveInvoice(){
+async function saveInvoice(photoId){
   if(!pendingItems.length){ showToast('أضف صنف واحد على الأقل قبل الحفظ', true); return; }
+  if(typeof photoId !== 'string') photoId = '';
   const btn = document.getElementById('save-invoice-btn');
   btn.disabled = true; btn.textContent = 'جاري الحفظ…';
 
@@ -2119,6 +2132,7 @@ async function saveInvoice(){
   const newRecords = pendingItems.map(it => {
     const rec = { ...it };
     delete rec._tempId;
+    if(photoId) rec.photoId = photoId;
     rec.addedBy = auth.currentUser ? auth.currentUser.email : '';
     rec.addedAt = firebase.firestore.FieldValue.serverTimestamp();
     return rec;
@@ -2144,7 +2158,64 @@ async function saveInvoice(){
   }catch(err){
     showToast('تعذر حفظ الفاتورة، تأكد من الاتصال وحاول مرة ثانية — أصناف الفاتورة لسه محفوظة بالأسفل', true);
   }
-  btn.disabled = false; btn.textContent = 'حفظ الفاتورة كاملة';
+  btn.disabled = false; btn.textContent = '📷 صوّر الفاتورة واحفظ';
+}
+
+// ---- Invoice photo: taken right before saving; stored compressed in its own collection so the
+// app's live listeners never download images (they're fetched only when someone taps "عرض").
+const PHOTOS = 'invoicePhotos';
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let max = 1400, q = 0.6, out = '';
+      for(let i = 0; i < 6; i++){
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if(out.length < 700000) return resolve(out); // Firestore doc limit is 1 MB
+        max = Math.round(max * 0.8); q = Math.max(0.4, q - 0.05);
+      }
+      out.length < 1000000 ? resolve(out) : reject(new Error('too big'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+    img.src = url;
+  });
+}
+document.getElementById('invoice-photo-input').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!pendingItems.length){ showToast('أضف صنف واحد على الأقل قبل الحفظ', true); return; }
+  const btn = document.getElementById('save-invoice-btn');
+  btn.disabled = true; btn.textContent = 'جاري رفع الصورة…';
+  let photoId = '';
+  try{
+    const dataUrl = await compressImage(file);
+    const first = pendingItems[0];
+    const ref = db.collection(PHOTOS).doc();
+    await withRetry(() => ref.set({
+      data: dataUrl, invoiceNo: first.invoiceNo || '', supplier: first.supplier || '', date: first.date || '',
+      addedBy: auth.currentUser ? auth.currentUser.email : '', addedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    photoId = ref.id;
+  }catch(err){
+    btn.disabled = false; btn.textContent = '📷 صوّر الفاتورة واحفظ';
+    if(!confirm('ما قدرنا نرفع صورة الفاتورة (تأكد من الاتصال). تبي تحفظ الفاتورة بدون صورة؟\n\nإلغاء = تبقى الفاتورة محفوظة مؤقتاً وتقدر تصوّر مرة ثانية.')) return;
+  }
+  await saveInvoice(photoId);
+});
+async function viewInvoicePhoto(id){
+  try{
+    const doc = await db.collection(PHOTOS).doc(id).get();
+    if(!doc.exists){ showToast('الصورة مو موجودة', true); return; }
+    document.getElementById('photo-modal-img').src = doc.data().data;
+    document.getElementById('photo-modal').style.display = 'flex';
+  }catch(err){ showToast('تعذر فتح الصورة، تأكد من الاتصال', true); }
 }
 
 // ---- Edit existing records ----
@@ -2358,6 +2429,7 @@ function getInvoiceGroups(){
     const key = (r.invoiceNo||'بدون رقم')+'|'+r.date+'|'+r.supplier;
     if(!map[key]) map[key] = { key, invoiceNo:r.invoiceNo||'', date:r.date, supplier:r.supplier, origin:r.origin||'السعودية', items:[], totalQty:0, totalValue:0 };
     map[key].items.push(r);
+    if(r.photoId && !map[key].photoId) map[key].photoId = r.photoId;
     map[key].totalQty += Number(r.qty)||0;
     map[key].totalValue += landedCost(r)*(Number(r.qty)||0);
   });
@@ -2395,6 +2467,7 @@ function renderInvoiceGroups(){
   body.innerHTML = groups.map(g=>`<tr>
     <td>${fmtDate(g.date)}</td><td>${esc(g.supplier)}</td><td>${esc(g.invoiceNo||'—')}</td><td>${esc(g.origin)}</td>
     <td>${g.items.length}</td><td>${g.totalQty}</td><td><strong>${g.totalValue.toFixed(2)} ر.س</strong></td>
+    <td>${g.photoId ? `<button class="edit-link" onclick="viewInvoicePhoto('${esc(g.photoId)}')">📷 عرض</button>` : '—'}</td>
     ${admin ? `<td>
       <button class="edit-link" onclick="editInvoiceGroup('${esc(g.invoiceNo)}')">تعديل</button>
       <button class="del" onclick="deleteInvoiceGroup('${esc(g.key)}')">حذف الفاتورة كاملة</button>
@@ -2438,6 +2511,7 @@ async function deleteInvoiceGroup(key){
     await withRetry(async ()=>{
       const batch = db.batch();
       group.items.forEach(r=> batch.delete(db.collection(KEYS.inflow).doc(r.id)));
+      if(group.photoId && !data.inflow.some(r => r.photoId === group.photoId && !group.items.includes(r))) batch.delete(db.collection(PHOTOS).doc(group.photoId));
       await batch.commit();
     });
     showToast(`تم حذف الفاتورة كاملة (${group.items.length} صنف)`);
